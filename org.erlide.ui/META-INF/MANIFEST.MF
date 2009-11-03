@@ -265,6 +265,7 @@ Export-Package: com.bdaum.overlayPages;x-internal:=true,
    org.eclipse.jface.viewers,
    org.eclipse.swt.widgets,
    org.eclipse.ui.editors.text",
+ org.erlide.ui.views.console,
  org.erlide.ui.views.eval;x-internal:=true;
   uses:="org.eclipse.jface.action,
    org.erlide.runtime.backend,

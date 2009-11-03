@@ -29,7 +29,6 @@ public class ConsoleOutputScanner implements ITokenScanner {
 	private boolean gotten;
 	private String text;
 	private int offset;
-	private int length;
 
 	public ConsoleOutputScanner(ColorManager colorManager) {
 		fColorManager = colorManager;
@@ -72,12 +71,11 @@ public class ConsoleOutputScanner implements ITokenScanner {
 
 	public void setRange(IDocument document, int offset, int length) {
 		this.offset = offset;
-		this.length = length;
-		if (document instanceof ErlConsoleDocument) {
-			// ErlConsoleDocument doc = (ErlConsoleDocument) document;
-			// BackendShell shell = doc.getShell();
-			// shell.getRequests(offset, length);
-		}
+		// if (document instanceof ErlConsoleDocument) {
+		// // ErlConsoleDocument doc = (ErlConsoleDocument) document;
+		// // BackendShell shell = doc.getShell();
+		// // shell.getRequests(offset, length);
+		// }
 		try {
 			text = document.get(offset, length);
 		} catch (BadLocationException e) {

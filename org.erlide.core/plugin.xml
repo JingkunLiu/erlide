@@ -132,5 +132,14 @@
             sourceLocatorId="org.erlide.core.erlangLocatorDirector"
             sourcePathComputerId="org.erlide.core.sourcepathcomputer">
       </launchConfigurationType>
+      <launchConfigurationType
+            delegate="org.erlide.runtime.launch.ErlangLaunchConfigurationDelegate"
+            id="org.erlide.core.launch.erlangProcess.internal"
+            modes="run, debug"
+            name="Erlang application"
+            sourceLocatorId="org.erlide.core.erlangLocatorDirector"
+            sourcePathComputerId="org.erlide.core.sourcepathcomputer"
+            public="false">
+      </launchConfigurationType>
    </extension>
 </plugin>

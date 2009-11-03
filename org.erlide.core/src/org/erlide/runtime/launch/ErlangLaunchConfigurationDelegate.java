@@ -139,7 +139,7 @@ public class ErlangLaunchConfigurationDelegate implements
         launch.setAttribute(DebugPlugin.ATTR_CAPTURE_OUTPUT, captureOutput);
 
         if (data.isInternal) {
-            ErlLogger.debug("Not creating a backend");
+			ErlLogger.debug("--- Not creating a backend");
             return null;
         }
 

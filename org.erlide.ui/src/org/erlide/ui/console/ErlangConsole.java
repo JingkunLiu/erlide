@@ -43,7 +43,7 @@ public class ErlangConsole extends TextConsole {
 
 	@Override
 	public IPageBookViewPage createPage(IConsoleView view) {
-		return new ErlangConsolePage(view, this);
+		return new ErlangConsolePage(this, view);
 	}
 
 	public Backend getBackend() {
@@ -98,7 +98,7 @@ public class ErlangConsole extends TextConsole {
 	}
 
 	public void stop() {
-		stopped  = true;
+		stopped = true;
 	}
 
 	public boolean isStopped() {

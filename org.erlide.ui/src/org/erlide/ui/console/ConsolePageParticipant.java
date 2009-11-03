@@ -55,7 +55,7 @@ import org.erlide.ui.console.actions.ShowWhenContentChangesAction;
 
 /**
  * Creates and manages process console specific actions
- * 
+ *
  * @since 3.1
  */
 public class ConsolePageParticipant implements IConsolePageParticipant,
@@ -80,7 +80,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 	/**
 	 * Handler to send EOF
 	 */
-	private class EOFHandler extends AbstractHandler {
+	class EOFHandler extends AbstractHandler {
 		public Object execute(final ExecutionEvent event)
 				throws org.eclipse.core.commands.ExecutionException {
 			IStreamsProxy proxy = getProcess().getStreamsProxy();
@@ -98,7 +98,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.eclipse.ui.console.IConsolePageParticipant#init(IPageBookViewPage,
 	 * IConsole)
@@ -108,7 +108,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 		fConsole = (ErlangConsole) console;
 
 		fTerminate = new ConsoleTerminateAction(fConsole);
-		fRemoveTerminated = new ConsoleRemoveLaunchAction(fConsole);
+		fRemoveTerminated = new ConsoleRemoveLaunchAction();
 		fRemoveAllTerminated = new ConsoleRemoveAllTerminatedAction();
 		fStdOut = new ShowStandardOutAction();
 
@@ -136,7 +136,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.eclipse.ui.console.IConsolePageParticipant#dispose()
 	 */
 	public void dispose() {
@@ -178,7 +178,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.eclipse.core.runtime.IAdaptable#getAdapter(java.lang.Class)
 	 */
 	public Object getAdapter(@SuppressWarnings("rawtypes") final Class required) {
@@ -201,7 +201,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.eclipse.ui.part.IShowInSource#getShowInContext()
 	 */
 	public ShowInContext getShowInContext() {
@@ -226,7 +226,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.eclipse.ui.part.IShowInTargetList#getShowInTargetIds()
 	 */
 	public String[] getShowInTargetIds() {
@@ -235,7 +235,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.eclipse.debug.core.IDebugEventSetListener#handleDebugEvents(org.eclipse
 	 * .debug.core.DebugEvent[])
@@ -263,7 +263,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.eclipse.ui.console.IConsolePageParticipant#activated()
 	 */
 	public void activated() {
@@ -281,7 +281,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.eclipse.ui.console.IConsolePageParticipant#deactivated()
 	 */
 	public void deactivated() {
@@ -297,7 +297,7 @@ public class ConsolePageParticipant implements IConsolePageParticipant,
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.eclipse.debug.internal.ui.contexts.provisional.IDebugContextListener
 	 * #contextEvent

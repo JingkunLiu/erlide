@@ -108,18 +108,19 @@ public class BackendShell {
 		synchronized (requests) {
 			requests.add(req);
 		}
-		notifyListeners();
+		notifyListeners(req);
 	}
 
 	public void add(final OtpErlangObject msg) {
+		IoRequest req;
 		synchronized (requests) {
 			deleteOldItems();
-			final IoRequest req = doAdd(msg);
-			if (req == null) {
-				return;
-			}
+			req = doAdd(msg);
 		}
-		notifyListeners();
+		if (req == null) {
+			return;
+		}
+		notifyListeners(req);
 	}
 
 	public void add(String text, IoRequestKind kind) {
@@ -144,7 +145,7 @@ public class BackendShell {
 			// requests.add(last);
 			// }
 		}
-		notifyListeners();
+		notifyListeners(req);
 	}
 
 	private IoRequest doAdd(final OtpErlangObject msg) {
@@ -203,10 +204,12 @@ public class BackendShell {
 		synchronized (requests) {
 			deleteOldItems();
 			for (final OtpErlangObject element : msgs) {
-				doAdd(element);
+				IoRequest req = doAdd(element);
+				if (req != null) {
+					notifyListeners(req);
+				}
 			}
 		}
-		notifyListeners();
 	}
 
 	public void dispose() {
@@ -231,10 +234,10 @@ public class BackendShell {
 		}
 	}
 
-	private void notifyListeners() {
+	private void notifyListeners(IoRequest req) {
 		synchronized (listeners) {
 			for (final BackendShellListener listener : listeners) {
-				listener.changed(this);
+				listener.shellEvent(this, req);
 			}
 		}
 	}

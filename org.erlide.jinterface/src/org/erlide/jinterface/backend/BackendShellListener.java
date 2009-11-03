@@ -10,9 +10,10 @@
  *******************************************************************************/
 package org.erlide.jinterface.backend;
 
+import org.erlide.jinterface.backend.console.IoRequest;
 
 public interface BackendShellListener {
 
-	void changed(BackendShell erlConsoleModel);
+	void shellEvent(BackendShell shell, IoRequest req);
 
 }

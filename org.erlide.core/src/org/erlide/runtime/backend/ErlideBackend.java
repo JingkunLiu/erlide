@@ -110,8 +110,10 @@ public final class ErlideBackend extends Backend implements IDisposable,
     public void streamAppended(final String text, final IStreamMonitor monitor) {
         if (monitor == proxy.getOutputStreamMonitor()) {
             // System.out.println(getName() + " OUT " + text);
+			shellManager.notifyShells(text, IoRequestKind.STDOUT);
         } else if (monitor == proxy.getErrorStreamMonitor()) {
             // System.out.println(getName() + " ERR " + text);
+			shellManager.notifyShells(text, IoRequestKind.STDERR);
         } else {
             // System.out.println("???" + text);
         }
@@ -128,24 +130,20 @@ public final class ErlideBackend extends Backend implements IDisposable,
     @Override
     public BackendShell getShell(final String id) {
         final BackendShell shell = super.getShell(id);
-        if (proxy != null) {
-            final IStreamMonitor errorStreamMonitor = proxy
-                    .getErrorStreamMonitor();
-            errorStreamMonitor.addListener(new IStreamListener() {
-                public void streamAppended(final String text,
-                        final IStreamMonitor monitor) {
-                    shell.add(text, IoRequestKind.STDERR);
-                }
-            });
-            final IStreamMonitor outputStreamMonitor = proxy
-                    .getOutputStreamMonitor();
-            outputStreamMonitor.addListener(new IStreamListener() {
-                public void streamAppended(final String text,
-                        final IStreamMonitor monitor) {
-                    shell.add(text, IoRequestKind.STDOUT);
-                }
-            });
-        }
+		// if (proxy != null) {
+		// IStreamMonitor errorStreamMonitor = proxy.getErrorStreamMonitor();
+		// errorStreamMonitor.addListener(new IStreamListener() {
+		// public void streamAppended(String text, IStreamMonitor monitor) {
+		// shell.add(text, IoRequestKind.STDERR);
+		// }
+		// });
+		// IStreamMonitor outputStreamMonitor = proxy.getOutputStreamMonitor();
+		// outputStreamMonitor.addListener(new IStreamListener() {
+		// public void streamAppended(String text, IStreamMonitor monitor) {
+		// shell.add(text, IoRequestKind.STDOUT);
+		// }
+		// });
+		// }
         return shell;
     }
 

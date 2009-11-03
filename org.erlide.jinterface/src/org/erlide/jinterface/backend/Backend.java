@@ -15,6 +15,7 @@ import java.net.Socket;
 import java.util.Collection;
 import java.util.HashMap;
 
+import org.erlide.jinterface.backend.console.IoRequest.IoRequestKind;
 import org.erlide.jinterface.backend.events.EventDaemon;
 import org.erlide.jinterface.backend.events.LogEventHandler;
 import org.erlide.jinterface.rpc.RpcException;
@@ -64,7 +65,7 @@ public class Backend extends OtpNodeStatus {
     private EventDaemon eventDaemon;
     private boolean monitor = false;
     private boolean watch = true;
-    private BackendShellManager shellManager;
+	protected BackendShellManager shellManager;
 
     protected Backend(final RuntimeInfo info) throws BackendException {
         if (info == null) {
@@ -608,7 +609,7 @@ public class Backend extends OtpNodeStatus {
                 direction, info));
     }
 
-    private class BackendShellManager implements IDisposable {
+	protected class BackendShellManager implements IDisposable {
 
         private final HashMap<String, BackendShell> fShells;
 
@@ -645,6 +646,13 @@ public class Backend extends OtpNodeStatus {
             }
             fShells.clear();
         }
+
+		public void notifyShells(String text, IoRequestKind kind) {
+			for (BackendShell shell : fShells.values()) {
+				shell.add(text, kind);
+			}
+		}
+
     }
 
     public BackendShell getShell(final String id) {
