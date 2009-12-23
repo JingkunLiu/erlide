@@ -1,11 +1,8 @@
 package org.erlide.core.preferences;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.Set;
 
 import org.eclipse.core.runtime.IPath;
@@ -28,16 +25,20 @@ public final class ErlangProjectProperties {
 	private final Set<SourceLocation> sources = Sets.newHashSet();
 	private Set<IPath> includes = Sets.newHashSet();
 	private IPath output;
-	private boolean allowOutputPerSource = false;
+	private final Set<SourceLocation> testSources = Sets.newHashSet();
 	private final Set<DependencyLocation> dependencies = Sets.newHashSet();
 	private final Set<CodePathLocation> codePathOrder = Sets.newHashSet();
-	private final Map<String, String> macros = new HashMap<String, String>();
+	// TODO add compiler options
 
 	public ErlangProjectProperties() {
 	}
 
 	public Collection<SourceLocation> getSources() {
 		return Collections.unmodifiableCollection(sources);
+	}
+
+	public Collection<SourceLocation> getTestSources() {
+		return Collections.unmodifiableCollection(testSources);
 	}
 
 	public Collection<IPath> getIncludes() {
@@ -57,60 +58,32 @@ public final class ErlangProjectProperties {
 	}
 
 	public void addDependencies(Collection<DependencyLocation> locations) {
-		for (DependencyLocation loc : locations) {
-			if (!dependencies.contains(loc)) {
-				dependencies.add(loc);
-			}
-		}
+		dependencies.addAll(locations);
 	}
 
 	public void removeDependencies(Collection<DependencyLocation> locations) {
-		for (DependencyLocation loc : locations) {
-			dependencies.remove(loc);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private static <U, T extends U> Collection<T> filter(
-			final Collection<U> dependencies2, final Class<T> class1) {
-		final List<T> result = new ArrayList<T>();
-		for (final U oo : dependencies2) {
-			if (oo.getClass().equals(class1)) {
-				result.add((T) oo);
-			}
-		}
-		return result;
+		dependencies.removeAll(locations);
 	}
 
 	public Collection<ProjectLocation> getProjectDependencies() {
-		return Collections.unmodifiableCollection(filter(dependencies,
-				ProjectLocation.class));
+		return PropertiesUtils.filter(dependencies, ProjectLocation.class);
 	}
 
 	public Collection<LibraryLocation> getLibraryDependencies() {
-		return Collections.unmodifiableCollection(filter(dependencies,
-				LibraryLocation.class));
-	}
-
-	public Collection<CodePathLocation> getCodePathOrder() {
-		return Collections.unmodifiableCollection(codePathOrder);
+		return PropertiesUtils.filter(dependencies, LibraryLocation.class);
 	}
 
 	public RuntimeVersion getRequiredRuntimeVersion() {
 		return requiredRuntimeVersion;
 	}
 
-	public Map<String, String> getMacros() {
-		return macros;
-	}
-
-	public void load(final IEclipsePreferences root)
-			throws BackingStoreException {
+	public void load(final Preferences root) throws BackingStoreException {
 		output = new Path(root.get(ProjectPreferencesConstants.OUTPUT, "ebin"));
 		requiredRuntimeVersion = new RuntimeVersion(root.get(
 				ProjectPreferencesConstants.REQUIRED_BACKEND_VERSION, null));
-		includes = Sets.newHashSet(PathSerializer.unpackList(root.get(
+		Collection<IPath> incs = PathSerializer.unpackCollection(root.get(
 				ProjectPreferencesConstants.INCLUDES, "")));
+		includes = Sets.newHashSet(incs);
 		final Preferences srcNode = root
 				.node(ProjectPreferencesConstants.SOURCES);
 		sources.clear();
@@ -120,47 +93,69 @@ public final class ErlangProjectProperties {
 			final SourceLocation loc = new SourceLocation(sn);
 			sources.add(loc);
 		}
+		final Preferences tstSrcNode = root
+				.node(ProjectPreferencesConstants.TEST_SOURCES);
+		testSources.clear();
+		for (final String src : tstSrcNode.childrenNames()) {
+			final IEclipsePreferences sn = (IEclipsePreferences) srcNode
+					.node(src);
+			final SourceLocation loc = new SourceLocation(sn);
+			testSources.add(loc);
+		}
 	}
 
-	public void store(final IEclipsePreferences root)
-			throws BackingStoreException {
-		CodePathLocation.clearAll(root);
+	public void store(final Preferences root) throws BackingStoreException {
+		CodePathEntry.clearAll(root);
 		root.put(ProjectPreferencesConstants.OUTPUT, output.toPortableString());
 		if (requiredRuntimeVersion != null) {
 			root.put(ProjectPreferencesConstants.REQUIRED_BACKEND_VERSION,
 					requiredRuntimeVersion.toString());
 		}
 		root.put(ProjectPreferencesConstants.INCLUDES, PathSerializer
-				.packList(includes));
+				.packCollection(includes));
 		final Preferences srcNode = root
 				.node(ProjectPreferencesConstants.SOURCES);
 		for (final SourceLocation loc : sources) {
-			loc.store((IEclipsePreferences) srcNode.node(Integer.toString(loc
-					.getId())));
+			loc.store(srcNode.node(Integer.toString(loc.getId())));
+		}
+		final Preferences tstSrcNode = root
+				.node(ProjectPreferencesConstants.TEST_SOURCES);
+		for (final SourceLocation loc : testSources) {
+			loc.store(tstSrcNode.node(Integer.toString(loc.getId())));
 		}
 
 		root.flush();
-	}
-
-	public void setAllowOutputPerSource(boolean allow) {
-		allowOutputPerSource = allow;
-	}
-
-	public boolean doesAllowOutputPerSource() {
-		return allowOutputPerSource;
 	}
 
 	public void setRequiredRuntimeVersion(RuntimeVersion runtimeVersion) {
 		requiredRuntimeVersion = runtimeVersion;
 	}
 
-	public void addSources(Collection<SourceLocation> mkSources) {
-		// TODO Auto-generated method stub
-
+	public void addSources(Collection<SourceLocation> newSources) {
+		sources.addAll(newSources);
 	}
 
-	public void addIncludes(Collection<String> includesList) {
-		// TODO Auto-generated method stub
+	public void addIncludes(Collection<IPath> newIncludes) {
+		includes.addAll(newIncludes);
+	}
 
+	public void removeSources(Collection<SourceLocation> newSources) {
+		sources.removeAll(newSources);
+	}
+
+	public void removeIncludes(Collection<IPath> newIncludes) {
+		includes.removeAll(newIncludes);
+	}
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		result.append("runtime    : ").append(requiredRuntimeVersion).append(
+				"\n");
+		result.append("sourceDirs  : ").append(sources).append("\n");
+		result.append("includeDirs : ").append(includes).append("\n");
+		result.append("output      : ").append(output).append("\n");
+		result.append("testSources : ").append(testSources).append("\n");
+		result.append("dependencies: ").append(dependencies).append("\n");
+		return result.toString();
 	}
 }

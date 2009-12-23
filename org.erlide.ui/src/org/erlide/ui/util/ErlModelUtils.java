@@ -68,6 +68,12 @@ public class ErlModelUtils {
 	private static final ArrayList<OtpErlangObject> NO_IMPORTS = new ArrayList<OtpErlangObject>(
 			0);
 
+	public static List<String> getExternalModules(final Backend b,
+			final String prefix, final String externalModules) {
+		return ErlideOpen.getExternalModules(b, prefix, externalModules,
+				ErlangCore.getModel().getPathVars());
+	}
+
 	public static IErlModule getModule(final IEditorPart editor) {
 		if (editor == null || !(editor instanceof AbstractDecoratedTextEditor)) {
 			return null;
@@ -562,15 +568,6 @@ public class ErlModelUtils {
 		}
 		return result;
 	}
-
-	public static List<String> getExternalModules(final Backend b,
-			final String prefix, final String externalModules) {
-		return ErlideOpen.getExternalModules(b, prefix, externalModules,
-				ErlangCore.getModel().getPathVars());
-	}
-
-	// FIXME: move this to a separate class, that somehow listens to something
-	// so that the map is not filled with old disposed stuff
 
 	public static IErlModule getModule(final IEditorInput editorInput,
 			final IDocumentProvider documentProvider) {

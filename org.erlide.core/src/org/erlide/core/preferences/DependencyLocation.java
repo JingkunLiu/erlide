@@ -11,34 +11,43 @@
 package org.erlide.core.preferences;
 
 import java.util.Collection;
-import java.util.EnumSet;
 
+import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IPath;
 
-public abstract class DependencyLocation extends CodePathLocation {
-	public enum Kind {
-		COMPILE_TIME, RUN_TIME
+public abstract class DependencyLocation extends CodePathEntry {
+	public static enum DependencyKind {
+		COMPILE, RUN, COMPILE_RUN
 	}
 
-	private final EnumSet<Kind> kind;
+	private final DependencyKind kind;
 	public abstract Collection<SourceLocation> getSources();
 	public abstract Collection<IPath> getIncludes();
+	/**
+	 * May be null, meaning that result is included by other means (OTP
+	 * libraries, for example).
+	 * 
+	 * @return
+	 */
 	public abstract IPath getOutput();
 	public abstract Collection<DependencyLocation> getDependencies();
 
-	public DependencyLocation(EnumSet<Kind> kind) {
-		if (kind == null) {
-			kind = EnumSet.of(Kind.RUN_TIME);
-		}
+	public DependencyLocation() {
+		this(DependencyKind.RUN);
+	}
+
+	public DependencyLocation(DependencyKind kind) {
+		Assert.isLegal(kind != null);
 		this.kind = kind;
 	}
 
 	public boolean isRunTime() {
-		return kind.contains(Kind.RUN_TIME);
+		return kind == DependencyKind.RUN || kind == DependencyKind.COMPILE_RUN;
 	}
 
 	public boolean isCompileTime() {
-		return kind.contains(Kind.COMPILE_TIME);
+		return kind == DependencyKind.COMPILE
+				|| kind == DependencyKind.COMPILE_RUN;
 	}
 
 }

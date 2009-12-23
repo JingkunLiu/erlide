@@ -10,40 +10,23 @@
  *******************************************************************************/
 package org.erlide.core.preferences;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
-public final class SourceLocation extends CodePathLocation {
+public final class SourceLocation extends CodePathEntry {
 	private IPath directory;
-	private List<String> includePatterns = new ArrayList<String>();
-	private List<String> excludePatterns = new ArrayList<String>();
-	private String output;
 
-	public SourceLocation(final IPath directory,
-			final List<String> includePatterns,
-			final List<String> excludePatterns, final String output,
-			final Map<String, String> compilerOptions,
-			final Map<String, Map<String, String>> fileCompilerOptions) {
+	// TODO add compiler options
+
+	public SourceLocation(final IPath directory) {
 		super();
 		Assert.isLegal(directory != null,
 				"SourceLocation requires a non-null directory");
 		this.directory = directory;
-		if (includePatterns != null) {
-			this.includePatterns = includePatterns;
-		}
-		if (excludePatterns != null) {
-			this.excludePatterns = excludePatterns;
-		}
-		this.output = output;
 	}
 
 	public SourceLocation(final IEclipsePreferences sn) {
@@ -55,20 +38,8 @@ public final class SourceLocation extends CodePathLocation {
 		return directory;
 	}
 
-	public Collection<String> getIncludePatterns() {
-		return Collections.unmodifiableCollection(includePatterns);
-	}
-
-	public Collection<String> getExcludePatterns() {
-		return Collections.unmodifiableCollection(excludePatterns);
-	}
-
-	public String getOutput() {
-		return output;
-	}
-
 	@Override
-	public void load(final IEclipsePreferences root) {
+	public void load(final Preferences root) {
 		directory = new Path(root.get(ProjectPreferencesConstants.DIRECTORY,
 				null));
 		Assert.isLegal(directory != null,
@@ -76,11 +47,15 @@ public final class SourceLocation extends CodePathLocation {
 	}
 
 	@Override
-	public void store(final IEclipsePreferences root)
-			throws BackingStoreException {
+	public void store(final Preferences root) throws BackingStoreException {
 		clearAll(root);
 		root.put(ProjectPreferencesConstants.DIRECTORY, directory.toString());
-
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		result.append("SRC{").append(directory).append("}");
+		return result.toString();
+	}
 }

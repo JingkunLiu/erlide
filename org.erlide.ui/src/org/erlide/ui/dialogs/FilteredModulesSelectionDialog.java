@@ -83,7 +83,7 @@ import erlang.ErlideOpen;
 /**
  * Shows a list of resources to the user with a text entry field for a string
  * pattern used to filter the list of resources.
- * 
+ *
  */
 public class FilteredModulesSelectionDialog extends
 		FilteredItemsSelectionDialog {
@@ -103,7 +103,7 @@ public class FilteredModulesSelectionDialog extends
 
 	/**
 	 * Creates a new instance of the class
-	 * 
+	 *
 	 * @param shell
 	 *            the parent shell
 	 * @param multi
@@ -140,7 +140,7 @@ public class FilteredModulesSelectionDialog extends
 
 	/**
 	 * Adds or replaces subtitle of the dialog
-	 * 
+	 *
 	 * @param text
 	 *            the new subtitle
 	 */
@@ -523,7 +523,7 @@ public class FilteredModulesSelectionDialog extends
 
 		/**
 		 * Returns the active working set the filter is working with.
-		 * 
+		 *
 		 * @return the active working set
 		 */
 		public IWorkingSet getWorkingSet() {
@@ -532,7 +532,7 @@ public class FilteredModulesSelectionDialog extends
 
 		/**
 		 * Sets the active working set.
-		 * 
+		 *
 		 * @param workingSet
 		 *            the working set the filter should work with
 		 */
@@ -564,7 +564,7 @@ public class FilteredModulesSelectionDialog extends
 
 		/**
 		 * Creates new ResourceProxyVisitor instance.
-		 * 
+		 *
 		 * @param contentProvider
 		 * @param resourceFilter
 		 * @param progressMonitor
@@ -608,13 +608,14 @@ public class FilteredModulesSelectionDialog extends
 				// navigate even "external" lists
 				final IErlModel model = ErlangCore.getModel();
 				if (project != null) {
-					final String extMods = model.getExternal(model
-							.findProject(project), ErlangCore.EXTERNAL_MODULES);
+					final String extMods = ErlangCore.getExternal(model
+							.findProject(project).getOldProperties(),
+							ErlangCore.EXTERNAL_MODULES);
 					final List<String> files = new ArrayList<String>();
 					files.addAll(PreferencesUtils.unpackList(extMods));
-					final String extIncs = model
-							.getExternal(model.findProject(project),
-									ErlangCore.EXTERNAL_INCLUDES);
+					final String extIncs = ErlangCore.getExternal(model
+							.findProject(project).getOldProperties(),
+							ErlangCore.EXTERNAL_INCLUDES);
 					files.addAll(PreferencesUtils.unpackList(extIncs));
 
 					final IPathVariableManager pvm = ResourcesPlugin
@@ -707,7 +708,7 @@ public class FilteredModulesSelectionDialog extends
 
 		/**
 		 * Creates new ResourceFilter instance
-		 * 
+		 *
 		 * @param container
 		 * @param showDerived
 		 *            flag which determine showing derived elements

@@ -30,9 +30,7 @@ import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.erlide.core.ErlangPlugin;
 import org.erlide.core.erlang.ErlModelException;
 import org.erlide.core.erlang.ErlangCore;
@@ -50,7 +48,6 @@ import org.erlide.core.erlang.IParent;
 import org.erlide.core.erlang.util.ErlangFunction;
 import org.erlide.core.erlang.util.ErlideUtil;
 import org.erlide.core.preferences.OldErlangProjectProperties;
-import org.erlide.jinterface.backend.util.PreferencesUtils;
 import org.erlide.jinterface.util.ErlLogger;
 
 import com.ericsson.otp.erlang.OtpErlangList;
@@ -535,7 +532,7 @@ public class ErlModel extends Openable implements IErlModel {
         final IErlProject p = ErlangCore.getModel().getErlangProject(
                 project.getName());
 
-        final OldErlangProjectProperties props = p.getProperties();
+		final OldErlangProjectProperties props = p.getOldProperties();
 
         final IFile file = project.getFile(".");
         if (!file.isLinked()) {
@@ -623,37 +620,6 @@ public class ErlModel extends Openable implements IErlModel {
                 }
             }
         }
-    }
-
-    public String getExternal(final IErlProject project, final int externalFlag) {
-        final IPreferencesService service = Platform.getPreferencesService();
-        final String key = externalFlag == ErlangCore.EXTERNAL_INCLUDES ? "default_external_includes"
-                : "default_external_modules";
-        String result = getExternal(project, externalFlag, service, key,
-                "org.erlide.ui");
-        if ("".equals(result)) {
-            result = getExternal(null, externalFlag, service, key,
-                    ErlangPlugin.PLUGIN_ID);
-        }
-        return result;
-    }
-
-    private String getExternal(final IErlProject project,
-            final int externalFlag, final IPreferencesService service,
-            final String key, final String pluginId) {
-        final String s = service.getString(pluginId, key, "", null);
-        if (s.length() > 0) {
-            ErlLogger.debug("%s: '%s'", key, s);
-        }
-        final String global = s;
-        if (project != null) {
-            final OldErlangProjectProperties prefs = project.getProperties();
-            final String projprefs = externalFlag == ErlangCore.EXTERNAL_INCLUDES ? prefs
-                    .getExternalIncludesFile() : prefs.getExternalModulesFile();
-            return PreferencesUtils
-                    .packArray(new String[] { projprefs, global });
-        }
-        return global;
     }
 
     OtpErlangList fCachedPathVars = null;

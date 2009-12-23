@@ -26,11 +26,13 @@ import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IProjectNature;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.ProjectScope;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.erlide.core.ErlangPlugin;
 import org.erlide.core.erlang.ErlModelException;
 import org.erlide.core.erlang.ErlangCore;
@@ -41,7 +43,9 @@ import org.erlide.core.erlang.IErlModelMarker;
 import org.erlide.core.erlang.IErlModule;
 import org.erlide.core.erlang.IErlProject;
 import org.erlide.core.erlang.util.ErlideUtil;
+import org.erlide.core.preferences.ErlangProjectProperties;
 import org.erlide.core.preferences.OldErlangProjectProperties;
+import org.erlide.core.preferences.PropertiesUtils;
 import org.erlide.jinterface.backend.util.Util;
 import org.erlide.jinterface.util.ErlLogger;
 
@@ -512,7 +516,7 @@ public class ErlProject extends Openable implements IErlProject {
     // FIXME
     public Collection<IErlModule> getModules() throws ErlModelException {
         final List<IErlModule> result = new ArrayList<IErlModule>();
-        final OldErlangProjectProperties props = getProperties();
+		OldErlangProjectProperties props = getOldProperties();
         for (final IPath src : props.getSourceDirs()) {
             final IFolder folder = fProject.getFolder(src);
             IResource[] members;
@@ -533,7 +537,7 @@ public class ErlProject extends Openable implements IErlProject {
 
     public Collection<IErlModule> getModulesAndHeaders() throws ErlModelException {
         final List<IErlModule> result = new ArrayList<IErlModule>();
-        final OldErlangProjectProperties props = getProperties();
+		final OldErlangProjectProperties props = getOldProperties();
         List<IPath> folders = Lists.newArrayList();
         folders.addAll(props.getSourceDirs());
         folders.addAll(props.getIncludeDirs());
@@ -645,8 +649,8 @@ public class ErlProject extends Openable implements IErlProject {
     }
 
     public boolean isOnSourcePath() {
-        return true; // FIXME eller? ska man kolla nature? fast det ï¿½r vï¿½l
-        // redan klart... kanske den inte ska ï¿½rva frï¿½n
+		return true; // FIXME eller? ska man kolla nature? fast det är väl
+		// redan klart... kanske den inte ska ärva från
         // IErlFolder? jaja....
     }
 
@@ -662,7 +666,31 @@ public class ErlProject extends Openable implements IErlProject {
         return true;
     }
 
-    public OldErlangProjectProperties getProperties() {
-        return new OldErlangProjectProperties(fProject);
+	public OldErlangProjectProperties getOldProperties() {
+		OldErlangProjectProperties props = new OldErlangProjectProperties(
+				fProject);
+		// FIXME: test code for new properties
+		ErlangProjectProperties newProps = PropertiesUtils.convertOld(props);
+		System.out.println("---- OLD PROPS");
+		System.out.println(props.toString());
+		System.out.println("---- NEW PROPS");
+		System.out.println(newProps.toString());
+
+		final IEclipsePreferences root = new ProjectScope(getProject())
+				.getNode(ErlangPlugin.PLUGIN_ID);
+		// try {
+		// newProps.store(root.node("test"));
+		// newProps.load(root.node("test"));
+		// System.out.println("---- LOADED PROPS");
+		// System.out.println(newProps.toString());
+		// } catch (BackingStoreException e) {
+		// }
+		System.out.println("---- ");
+		// end fixme
+		return props;
+	}
+
+	public ErlangProjectProperties getNewProperties() {
+		return PropertiesUtils.convertOld(getOldProperties());
     }
 }

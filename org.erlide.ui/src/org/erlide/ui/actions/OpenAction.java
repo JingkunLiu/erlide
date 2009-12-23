@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.erlide.ui.actions;
 
+import java.util.ArrayList;
+
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -33,6 +35,7 @@ import org.erlide.core.erlang.IErlProject;
 import org.erlide.core.erlang.ISourceRange;
 import org.erlide.core.erlang.ISourceReference;
 import org.erlide.core.erlang.util.ErlangFunction;
+import org.erlide.core.erlang.util.ErlideUtil;
 import org.erlide.core.erlang.util.ModelUtils;
 import org.erlide.core.erlang.util.ResourceUtil;
 import org.erlide.core.text.ErlangToolkit;
@@ -152,9 +155,9 @@ public class OpenAction extends SelectionDispatchAction {
 			final IErlProject erlProject = module.getErlProject();
 			final IErlModel model = ErlangCore.getModel();
 			final OpenResult res = ErlideOpen.open(b, ErlangToolkit
-					.createScannerModuleName(module), offset, ErlModelUtils
-					.getImportsAsList(module), model.getExternal(erlProject,
-					ErlangCore.EXTERNAL_MODULES), model.getPathVars());
+					.createScannerModuleName(editor.getModule()), offset,
+					ErlangCore.getExternal(erlProject.getOldProperties(),
+							ErlangCore.EXTERNAL_MODULES), model.getPathVars());
 			ErlLogger.debug("open " + res);
 			openOpenResult(editor, module, b, offset, erlProject, res);
 		} catch (final Exception e) {
@@ -242,8 +245,9 @@ public class OpenAction extends SelectionDispatchAction {
 			if (r == null) {
 				try {
 					final String includeFile = ModelUtils.findIncludeFile(
-							project, res.getName(), model.getExternal(
-									erlProject, ErlangCore.EXTERNAL_INCLUDES));
+							project, res.getName(), ErlangCore.getExternal(
+									erlProject.getOldProperties(),
+									ErlangCore.EXTERNAL_INCLUDES));
 					if (includeFile != null) {
 						r = ResourceUtil.openExternal(includeFile);
 					}
@@ -275,8 +279,9 @@ public class OpenAction extends SelectionDispatchAction {
 						mod = ei.getImportModule();
 						try {
 							res2 = ErlideOpen.getSourceFromModule(b, model
-									.getPathVars(), mod, model.getExternal(
-									erlProject, ErlangCore.EXTERNAL_MODULES));
+									.getPathVars(), mod, ErlangCore
+									.getExternal(erlProject.getOldProperties(),
+											ErlangCore.EXTERNAL_MODULES));
 						} catch (final BackendException e1) {
 							ErlLogger.warn(e1);
 						}
@@ -323,9 +328,18 @@ public class OpenAction extends SelectionDispatchAction {
 			}
 			final IErlElement.Kind kind = res.isMacro() ? IErlElement.Kind.MACRO_DEF
 					: IErlElement.Kind.RECORD_DEF;
-			ErlModelUtils.openPreprocessorDef(b, project, page, module,
-					definedName, kind, model.getExternal(erlProject,
-							ErlangCore.EXTERNAL_INCLUDES));
+			String unquoted = ErlideUtil.unquote(definedName);
+			final String[] s = new String[] { definedName, unquoted,
+					ErlModelUtils.checkPredefinedMacro(unquoted, module) };
+			for (final String string : s) {
+				if (ErlModelUtils.openPreprocessorDef(b, project, page, module,
+						string, type, ErlangCore.getExternal(erlProject
+								.getOldProperties(),
+								ErlangCore.EXTERNAL_INCLUDES),
+						new ArrayList<IErlModule>())) {
+					break;
+				}
+			}
 		}
 	}
 }

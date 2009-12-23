@@ -31,15 +31,22 @@ import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.erlide.core.ErlangPlugin;
 import org.erlide.core.erlang.internal.ErlModelManager;
 import org.erlide.core.preferences.OldErlangProjectProperties;
+import org.erlide.jinterface.backend.Backend;
 import org.erlide.jinterface.backend.RuntimeInfo;
+import org.erlide.jinterface.backend.util.PreferencesUtils;
+import org.erlide.jinterface.util.ErlLogger;
 import org.erlide.runtime.backend.BackendManager;
 import org.erlide.runtime.backend.RuntimeInfoManager;
+
+import erlang.ErlideOpen;
 
 /**
  * <p>
@@ -513,6 +520,45 @@ public final class ErlangCore {
         }
     }
 
+	public static String getExternal(
+			final OldErlangProjectProperties properties, final int externalFlag) {
+		final IPreferencesService service = Platform.getPreferencesService();
+		final String key = externalFlag == ErlangCore.EXTERNAL_INCLUDES ? "default_external_includes"
+				: "default_external_modules";
+		String result = getExternal(properties, externalFlag, service, key,
+				"org.erlide.ui");
+		if ("".equals(result)) {
+			result = getExternal(properties, externalFlag, service, key,
+					ErlangPlugin.PLUGIN_ID);
+		}
+		return result;
+	}
+
+	private static String getExternal(
+			final OldErlangProjectProperties properties,
+			final int externalFlag, final IPreferencesService service,
+			final String key, final String pluginId) {
+		final String s = service.getString(pluginId, key, "", null);
+		if (s.length() > 0) {
+			ErlLogger.debug("%s: '%s'", key, s);
+		}
+		final String global = s;
+		if (properties != null) {
+			final String projprefs = externalFlag == ErlangCore.EXTERNAL_INCLUDES ? properties
+					.getExternalIncludesFile()
+					: properties.getExternalModulesFile();
+			return PreferencesUtils
+					.packArray(new String[] { projprefs, global });
+		}
+		return global;
+	}
+
     private ErlangCore() {
+	}
+
+	public static List<String> getExternalModules(final Backend b,
+			final String prefix, final String externalModules) {
+		return ErlideOpen.getExternalModules(b, prefix, externalModules,
+				getModel().getPathVars());
     }
 }

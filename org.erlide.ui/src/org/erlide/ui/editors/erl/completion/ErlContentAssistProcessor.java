@@ -39,7 +39,6 @@ import org.erlide.core.erlang.IErlElement.Kind;
 import org.erlide.core.erlang.IErlFunction;
 import org.erlide.core.erlang.IErlFunctionClause;
 import org.erlide.core.erlang.IErlImport;
-import org.erlide.core.erlang.IErlModel;
 import org.erlide.core.erlang.IErlModule;
 import org.erlide.core.erlang.IErlPreprocessorDef;
 import org.erlide.core.erlang.IErlProject;
@@ -48,6 +47,7 @@ import org.erlide.core.erlang.ISourceRange;
 import org.erlide.core.erlang.ISourceReference;
 import org.erlide.core.erlang.util.ErlangFunction;
 import org.erlide.core.erlang.util.ErlideUtil;
+import org.erlide.core.preferences.OldErlangProjectProperties;
 import org.erlide.jinterface.backend.Backend;
 import org.erlide.jinterface.backend.util.Util;
 import org.erlide.jinterface.util.ErlLogger;
@@ -285,20 +285,24 @@ public class ErlContentAssistProcessor implements IContentAssistProcessor {
 		final IErlProject erlProject = module.getProject();
 		final IProject project = (erlProject == null) ? null
 				: (IProject) erlProject.getResource();
-		final IErlModel model = ErlangCore.getModel();
+		OldErlangProjectProperties props = erlProject.getOldProperties();
+		String external = ErlangCore.getExternal(props,
+				ErlangCore.EXTERNAL_INCLUDES);
 		final IErlPreprocessorDef pd = ErlModelUtils.findPreprocessorDef(b,
-				project, module, recordName, Kind.RECORD_DEF,
-				model.getExternal(erlProject, ErlangCore.EXTERNAL_INCLUDES));
+				project, module, recordName, IErlElement.Kind.RECORD_DEF,
+				external);
 		if (pd instanceof IErlRecordDef) {
 			final List<ICompletionProposal> result = new ArrayList<ICompletionProposal>();
 			final IErlRecordDef recordDef = (IErlRecordDef) pd;
 			final List<String> fields = recordDef.getFields();
 			for (final String field : fields) {
-				if (!fieldsSoFar.contains(field)) {
-					addIfMatches(field, prefix, offset, result);
+				if (field.startsWith(prefix)) {
+					final int alength = prefix.length();
+					result.add(new CompletionProposal(field, offset - alength,
+							alength, field.length()));
 				}
+				return result;
 			}
-			return result;
 		}
 		return EMPTY_COMPLETIONS;
 	}
@@ -328,11 +332,16 @@ public class ErlContentAssistProcessor implements IContentAssistProcessor {
 					}
 				}
 			}
-			final IErlModel model = ErlangCore.getModel();
 			// add external modules
+<<<<<<< HEAD
 			final List<String> mods = ErlModelUtils.getExternalModules(b,
 					prefix,
 					model.getExternal(erlProject, ErlangCore.EXTERNAL_MODULES));
+=======
+			final List<String> mods = ErlangCore.getExternalModules(b, prefix,
+					ErlangCore.getExternal(erlProject.getOldProperties(),
+							ErlangCore.EXTERNAL_MODULES));
+>>>>>>> introduced new project properties
 			for (final String m : mods) {
 				final String name = ErlideUtil.basenameWithoutExtension(m);
 				if (!allErlangFiles.contains(name)) {
@@ -440,10 +449,10 @@ public class ErlContentAssistProcessor implements IContentAssistProcessor {
 		if (module == null) {
 			return EMPTY_COMPLETIONS;
 		}
-		final IErlModel model = ErlangCore.getModel();
 		final List<IErlPreprocessorDef> defs = ErlModelUtils
-				.getPreprocessorDefs(b, project, module, kind, model
-						.getExternal(erlProject, ErlangCore.EXTERNAL_INCLUDES));
+				.getPreprocessorDefs(b, project, module, kind, ErlangCore
+						.getExternal(erlProject.getOldProperties(),
+								ErlangCore.EXTERNAL_INCLUDES));
 		final List<ICompletionProposal> result = new ArrayList<ICompletionProposal>();
 		for (final IErlPreprocessorDef pd : defs) {
 			final String name = pd.getDefinedName();
@@ -469,11 +478,10 @@ public class ErlContentAssistProcessor implements IContentAssistProcessor {
 		// first check in project, refs and external modules
 		final List<IErlModule> modules = ErlModelUtils
 				.getModulesWithReferencedProjects(project);
-		final IErlModel model = ErlangCore.getModel();
-		final IErlProject erlProject = (module == null) ? null : module
-				.getProject();
+		final OldErlangProjectProperties props = module == null ? null : module
+				.getProject().getOldProperties();
 		final IErlModule external = ErlModelUtils.getExternalModule(moduleName,
-				model.getExternal(erlProject, ErlangCore.EXTERNAL_MODULES));
+				ErlangCore.getExternal(props, ErlangCore.EXTERNAL_MODULES));
 		if (external != null) {
 			modules.add(external);
 		}

@@ -11,7 +11,6 @@
  *******************************************************************************/
 package org.erlide.core.preferences;
 
-
 /**
  * Constants used in project and plugin preferences
  *
@@ -31,17 +30,17 @@ public final class ProjectPreferencesConstants {
 	public static final String OUTPUT_DIR = "output_dir";
 	public static final String DEFAULT_OUTPUT_DIR = "ebin";
 
-	public static final String EXTERNAL_INCLUDES = "external_includes";
-	public static final String DEFAULT_EXTERNAL_INCLUDES = "";
-
 	public static final String RUNTIME_VERSION = "backend_version";
 	public static final String DEFAULT_RUNTIME_VERSION = "R13B";
 
 	public static final String RUNTIME_NAME = "backend_name";
 	public static final String DEFAULT_RUNTIME_NAME = "R13B";
 
+	public static final String EXTERNAL_INCLUDES = "external_includes";
+	public static final String DEFAULT_EXTERNAL_INCLUDES = null;
+
 	public static final String PROJECT_EXTERNAL_MODULES = "external_modules";
-	public static final String DEFAULT_EXTERNAL_MODULES = "";
+	public static final String DEFAULT_EXTERNAL_MODULES = null;
 
 	public static final String PROJECT_TYPE = "type";
 	public static final String DEFAULT_PROJECT_TYPE = "NORMAL";
@@ -49,6 +48,7 @@ public final class ProjectPreferencesConstants {
 	// new project properties
 
 	public static final String SOURCES = "sources";
+	public static final String TEST_SOURCES = "test_sources";
 	public static final String BACKEND_COOKIE = "backendCookie";
 	public static final String BACKEND_NODE_NAME = "BackendName";
 	public static final String REQUIRED_BACKEND_VERSION = "requiredBackendVersion";

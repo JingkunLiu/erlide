@@ -12,22 +12,28 @@ package org.erlide.core.preferences;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.eclipse.core.resources.IPathVariableManager;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.erlide.core.erlang.ErlangCore;
+import org.erlide.core.preferences.DependencyLocation.DependencyKind;
 import org.erlide.jinterface.backend.RuntimeInfo;
 import org.erlide.jinterface.backend.util.PreferencesUtils;
 import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.runtime.backend.ErlideBackend;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public final class PropertiesUtils {
+
 	public static ErlangProjectProperties convertOld(
 			final OldErlangProjectProperties old) {
 		ErlangProjectProperties result = new ErlangProjectProperties();
@@ -40,33 +46,45 @@ public final class PropertiesUtils {
 		}
 
 		result.addSources(mkSources(old.getSourceDirs()));
-		result.addIncludes(PreferencesUtils.unpackList(PathSerializer
-				.packList(old.getIncludeDirs())));
-		result.setOutput(old.getOutputDir());
+		List<String> incs = old.getIncludeDirs();
+		List<IPath> incsp = Lists.newArrayList();
+		for (String inc : incs) {
+			incsp.add(new Path(inc));
+		}
+		result.addIncludes(incsp);
 
-		final IPathVariableManager pvman = ResourcesPlugin.getWorkspace()
-				.getPathVariableManager();
+		// now for the dependencies
+		ErlideBackend b = ErlangCore.getBackendManager().getIdeBackend();
+		final List<String> externalModules = ErlangCore.getExternalModules(b,
+				"", ErlangCore.getExternal(old, ErlangCore.EXTERNAL_MODULES));
+		final List<SourceLocation> sloc = makeExternalModules(externalModules);
 
-		final String exmodf = old.getExternalModulesFile();
-		IPath ff = pvman.resolvePath(new Path(exmodf));
-		final List<String> externalModules = PreferencesUtils.readFile(ff
-				.toString());
-		final List<SourceLocation> sloc = makeSourceLocations(externalModules);
+		final List<String> externalIncludes = ErlangCore.getExternalModules(b,
+				"", ErlangCore.getExternal(old, ErlangCore.EXTERNAL_INCLUDES));
+		final List<IPath> iloc = makeExternalIncludes(externalIncludes);
 
-		final String exincf = old.getExternalModulesFile();
-		ff = pvman.resolvePath(new Path(exincf));
-		// List<String> exinc = PreferencesUtils.readFile(ff.toString());
-		final List<IPath> externalIncludes = null;// PreferencesUtils.unpackList(exinc);
-
-		final LibraryLocation loc = new LibraryLocation(sloc, externalIncludes,
-				null, null);
-		ArrayList<DependencyLocation> locs = new ArrayList<DependencyLocation>();
-		locs.add(loc);
+		final LibraryLocation loc = new LibraryLocation(sloc, iloc, null,
+				DependencyKind.COMPILE_RUN);
+		ArrayList<DependencyLocation> locs = Lists.newArrayList();
+		// TODO maybe group these according to path?
+		if (sloc.size() > 0 || iloc.size() > 0) {
+			locs.add(loc);
+		}
 		result.addDependencies(locs);
+		// TODO add OTP dependency
+		// TODO add also project dependencies
 		return result;
 	}
 
-	private static List<SourceLocation> makeSourceLocations(
+	private static List<IPath> makeExternalIncludes(List<String> exinc) {
+		List<IPath> result = Lists.newArrayList();
+		for (String str : exinc) {
+			result.add(new Path(str));
+		}
+		return result;
+	}
+
+	private static List<SourceLocation> makeExternalModules(
 			final List<String> externalModules) {
 		final List<SourceLocation> result = Lists.newArrayList();
 
@@ -97,8 +115,8 @@ public final class PropertiesUtils {
 		ErlLogger.debug(grouped.toString());
 
 		for (final Entry<IPath, List<String>> loc : grouped.entrySet()) {
-			final SourceLocation location = new SourceLocation(loc.getKey(),
-					loc.getValue(), null, null, null, null);
+			final SourceLocation location = new SourceLocation(new Path(loc
+					.getKey()));
 			result.add(location);
 		}
 
@@ -108,9 +126,21 @@ public final class PropertiesUtils {
 	private static List<SourceLocation> mkSources(final Collection<IPath> list) {
 		final List<SourceLocation> result = Lists.newArrayList();
 		for (final IPath src : list) {
-			result.add(new SourceLocation(src, null, null, null, null, null));
+			result.add(new SourceLocation(new Path(src)));
 		}
 		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <U, T extends U> Collection<T> filter(
+			final Collection<U> list, final Class<T> class1) {
+		final List<T> result = new ArrayList<T>();
+		for (final U oo : list) {
+			if (oo.getClass().equals(class1)) {
+				result.add((T) oo);
+			}
+		}
+		return Collections.unmodifiableCollection(result);
 	}
 
 	private PropertiesUtils() {

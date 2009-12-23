@@ -13,28 +13,30 @@ package org.erlide.core.preferences;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
 public final class LibraryLocation extends DependencyLocation {
 	private List<SourceLocation> sources = new ArrayList<SourceLocation>();
 	private List<IPath> includes = new ArrayList<IPath>();
 	private final IPath output;
-	private List<DependencyLocation> libraries = new ArrayList<DependencyLocation>();
 
+	/**
+	 * 
+	 * @param sources
+	 * @param includes
+	 * @param output
+	 *            location of binaries. May be null, meaning that the location
+	 *            is included in code path by some external means.
+	 * @param kind
+	 */
 	public LibraryLocation(final List<SourceLocation> sources,
 			final List<IPath> includes, final IPath output,
-			final List<DependencyLocation> libraries) {
-		this(sources, includes, output, libraries, null);
-	}
-
-	public LibraryLocation(final List<SourceLocation> sources,
-			final List<IPath> includes, final IPath output,
-			final List<DependencyLocation> libraries, final EnumSet<Kind> kind) {
+			final DependencyKind kind) {
 		super(kind);
 		if (sources != null) {
 			this.sources = sources;
@@ -43,9 +45,6 @@ public final class LibraryLocation extends DependencyLocation {
 			this.includes = includes;
 		}
 		this.output = output;
-		if (libraries != null) {
-			this.libraries = libraries;
-		}
 	}
 
 	@Override
@@ -65,28 +64,35 @@ public final class LibraryLocation extends DependencyLocation {
 
 	@Override
 	public Collection<DependencyLocation> getDependencies() {
-		return Collections.unmodifiableCollection(libraries);
+		return Collections.emptyList();
 	}
 
 	@Override
-	public void load(final IEclipsePreferences root) {
-
+	public void load(final Preferences root) {
+		// TODO implement
 	}
 
 	@Override
-	public void store(final IEclipsePreferences root)
-	throws BackingStoreException {
+	public void store(final Preferences root) throws BackingStoreException {
 		clearAll(root);
 		root.put(ProjectPreferencesConstants.OUTPUT, output.toPortableString());
 		final IEclipsePreferences node = (IEclipsePreferences) root
-		.node(ProjectPreferencesConstants.SOURCES);
+				.node(ProjectPreferencesConstants.SOURCES);
 		for (final SourceLocation loc : sources) {
-			loc.store((IEclipsePreferences) node.node(loc.getDirectory().toString()));
+			loc.store((IEclipsePreferences) node.node(loc.getDirectory()
+					.toString()));
 		}
 		root.put(ProjectPreferencesConstants.INCLUDES, PathSerializer
-				.packList(includes));
+				.packCollection(includes));
 		root.flush();
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		result.append("LIB{").append(sources).append(", ").append(includes)
+				.append(", ").append(output).append("}");
+		return result.toString();
+	}
 
 }

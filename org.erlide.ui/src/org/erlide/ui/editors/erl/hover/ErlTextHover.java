@@ -291,10 +291,10 @@ public class ErlTextHover implements ITextHover,
 					.getBuildBackend(project);
 
 			final IErlModel model = ErlangCore.getModel();
-			r1 = ErlideDoc.getOtpDoc(ide, b, offset, stateDir,
-					ErlangToolkit.createScannerModuleName(module), fImports,
-					model.getExternal(erlProject, ErlangCore.EXTERNAL_MODULES),
-					model.getPathVars());
+			r1 = ErlideDoc.getOtpDoc(ide, b, offset, stateDir, ErlangToolkit
+					.createScannerModuleName(module), fImports, ErlangCore
+					.getExternal(erlProject.getOldProperties(),
+							ErlangCore.EXTERNAL_MODULES), model.getPathVars());
 			// ErlLogger.debug("getHoverInfo getDocFromScan " + r1);
 			final OtpErlangTuple t = (OtpErlangTuple) r1;
 			if (Util.isOk(t)) {
@@ -392,8 +392,15 @@ public class ErlTextHover implements ITextHover,
 						final IErlElement.Kind kindToFind = openKind
 								.equals("record") ? IErlElement.Kind.RECORD_DEF
 								: IErlElement.Kind.MACRO_DEF;
+<<<<<<< HEAD
 						final String externalIncludes = model.getExternal(
 								erlProject, ErlangCore.EXTERNAL_INCLUDES);
+=======
+						definedName = a1.toString();
+						final String externalIncludes = ErlangCore.getExternal(
+								erlProject.getOldProperties(),
+								ErlangCore.EXTERNAL_INCLUDES);
+>>>>>>> introduced new project properties
 						IErlPreprocessorDef pd = ErlModelUtils
 								.findPreprocessorDef(ide, project, module,
 										definedName, kindToFind,

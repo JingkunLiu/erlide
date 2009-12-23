@@ -72,7 +72,6 @@ public final class OldErlangProjectProperties implements
                 e.printStackTrace();
             }
         }
-
         String sourceDirsStr = node.get(
                 ProjectPreferencesConstants.SOURCE_DIRS,
                 ProjectPreferencesConstants.DEFAULT_SOURCE_DIRS);
@@ -115,19 +114,20 @@ public final class OldErlangProjectProperties implements
             return;
         }
 
-        if ("true".equals(System.getProperty("erlide.newprops"))) {
-            final ErlangProjectProperties npp = PropertiesUtils
-                    .convertOld(this);
-            try {
-                npp.store((IEclipsePreferences) node.node("test"));
-            } catch (final BackingStoreException e) {
-                e.printStackTrace();
-            }
-        }
+		node.removePreferenceChangeListener(this);
 
-        node.removePreferenceChangeListener(this);
+		try {
+			String pp = System.getProperty("erlide.newprops");
+			if ("true".equals(pp)) {
+				System.out.println("Store new props  // test");
+				final ErlangProjectProperties npp = PropertiesUtils
+						.convertOld(this);
+				try {
+					npp.store(node.node("test"));
+				} catch (final BackingStoreException e) {
+				}
+			}
 
-        try {
             node.put(ProjectPreferencesConstants.SOURCE_DIRS,
                     PathSerializer.packList(sourceDirs));
             node.put(ProjectPreferencesConstants.INCLUDE_DIRS,
@@ -286,4 +286,18 @@ public final class OldErlangProjectProperties implements
         this.runtimeVersion = runtimeVersion;
     }
 
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		result.append("runtime    : ").append(runtimeVersion).append(" > ")
+				.append(runtimeName).append("\n");
+		result.append("sourceDirs : ").append(sourceDirs).append("\n");
+		result.append("includeDirs: ").append(includeDirs).append("\n");
+		result.append("output     : ").append(outputDir).append("\n");
+		result.append("externalInc: ").append(externalIncludesFile).append(
+				" ... dump content!").append("\n");
+		result.append("externalMod: ").append(externalModulesFile).append(
+				" ... dump content!").append("\n");
+		return result.toString();
+	}
 }

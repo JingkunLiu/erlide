@@ -43,12 +43,11 @@ public class ErlModulePropertyPage extends PropertyPage implements
 		String value = "There is no module information about this file.";
 		if (module != null) {
 			IErlProject project = module.getErlProject();
-			OldErlangProjectProperties prefs = project.getProperties();
+			OldErlangProjectProperties prefs = project.getOldProperties();
 			IPath beamPath = prefs.getOutputDir().append(
 					module.getModuleName()).addFileExtension("beam");
 			IFile beam = project.getProject().getFile(beamPath);
 
-			// TODO should it be the build backend?
 			Backend backend = ErlangCore.getBackendManager().getIdeBackend();
 			try {
 				OtpErlangObject info = backend.call("erlide_backend",

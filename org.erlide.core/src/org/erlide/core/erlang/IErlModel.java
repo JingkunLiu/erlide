@@ -300,8 +300,6 @@ public interface IErlModel extends IErlElement, IOpenable, IParent {
     public IErlElement innermostThat(final IErlElement el,
 			final IErlangFirstThat firstThat);
 
-	String getExternal(IErlProject erlProject, int externalFlag);
-
 	OtpErlangList getPathVars();
 
 	/**

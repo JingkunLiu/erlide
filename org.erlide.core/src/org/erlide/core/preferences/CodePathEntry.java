@@ -4,16 +4,16 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Vlad Dumitrescu
  *******************************************************************************/
 package org.erlide.core.preferences;
 
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
-public abstract class CodePathLocation {
+public abstract class CodePathEntry {
 	private static int gid = 1;
 
 	public static synchronized int newId() {
@@ -22,7 +22,7 @@ public abstract class CodePathLocation {
 
 	private final int id;
 
-	public CodePathLocation() {
+	public CodePathEntry() {
 		id = newId();
 	}
 
@@ -30,13 +30,11 @@ public abstract class CodePathLocation {
 		return id;
 	}
 
-	public abstract void load(IEclipsePreferences root)
-			throws BackingStoreException;
+	public abstract void load(Preferences root) throws BackingStoreException;
 
-	public abstract void store(IEclipsePreferences root)
-			throws BackingStoreException;
+	public abstract void store(Preferences root) throws BackingStoreException;
 
-	public static void clearAll(final IEclipsePreferences root)
+	public static void clearAll(final Preferences root)
 			throws BackingStoreException {
 		root.clear();
 		for (final String n : root.childrenNames()) {

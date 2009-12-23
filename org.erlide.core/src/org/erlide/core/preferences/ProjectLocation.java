@@ -11,28 +11,27 @@
 package org.erlide.core.preferences;
 
 import java.util.Collection;
-import java.util.EnumSet;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.erlide.core.erlang.ErlangCore;
 import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
 public final class ProjectLocation extends DependencyLocation {
 	private IProject project;
+	private final ErlangProjectProperties otherProps;
 
-	public ProjectLocation(final IProject project) {
-		this(project, null);
-	}
-
-	public ProjectLocation(final IProject project, final EnumSet<Kind> kind) {
+	public ProjectLocation(final IProject project, final DependencyKind kind) {
 		super(kind);
 		Assert.isLegal(project != null,
 				"ProjectLocation requires a non-null project");
 		this.project = project;
+		otherProps = ErlangCore.getModel().getErlangProject(project.getName())
+				.getNewProperties();
 	}
 
 	public IProject getProject() {
@@ -40,7 +39,7 @@ public final class ProjectLocation extends DependencyLocation {
 	}
 
 	@Override
-	public void load(final IEclipsePreferences root) {
+	public void load(final Preferences root) {
 		final String projectName = root.get(
 				ProjectPreferencesConstants.PROJECT, null);
 		final IWorkspace workspace = ResourcesPlugin.getWorkspace();
@@ -50,34 +49,34 @@ public final class ProjectLocation extends DependencyLocation {
 	}
 
 	@Override
-	public void store(final IEclipsePreferences root)
-			throws BackingStoreException {
+	public void store(final Preferences root) throws BackingStoreException {
 		clearAll(root);
 		root.put(ProjectPreferencesConstants.PROJECT, project.getName());
 	}
 
 	@Override
 	public Collection<IPath> getIncludes() {
-		// TODO Auto-generated method stub
-		return null; // ErlangCore.getModel().getErlangProject(project.getName()).getProperties();
+		return otherProps.getIncludes();
 	}
 
 	@Override
 	public Collection<DependencyLocation> getDependencies() {
-		// TODO Auto-generated method stub
-		return null;
+		return otherProps.getDependencies();
 	}
 
 	@Override
 	public IPath getOutput() {
-		// TODO Auto-generated method stub
-		return null;
+		return otherProps.getOutput();
 	}
 
 	@Override
 	public Collection<SourceLocation> getSources() {
-		// TODO Auto-generated method stub
-		return null;
+		return otherProps.getSources();
+	}
+
+	@Override
+	public String toString() {
+		return "PRJ{" + project + "}";
 	}
 
 }
