@@ -34,7 +34,8 @@ public class SendToConsoleAction extends SelectionDispatchAction {
 			}
 			text += "\n"; //$NON-NLS-1$
 			// send it off to the console
-			p.input(text);
+			// FIXME disabled this until console is fixed
+			// p.input(text);
 		}
 		super.run(selection);
 	}
