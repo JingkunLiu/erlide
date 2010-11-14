@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.erlide.runtime.backend;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +49,7 @@ import org.erlide.jinterface.backend.Backend;
 import org.erlide.jinterface.backend.BackendException;
 import org.erlide.jinterface.backend.BackendListener;
 import org.erlide.jinterface.backend.BackendUtil;
+import org.erlide.jinterface.backend.NoBackendException;
 import org.erlide.jinterface.backend.RuntimeInfo;
 import org.erlide.jinterface.backend.RuntimeVersion;
 import org.erlide.jinterface.util.EpmdWatcher;
@@ -132,8 +134,12 @@ public final class BackendManager extends OtpNodeStatus implements
             b = new ErlideBackend(info);
 
             final ManagedLauncher launcher = new ManagedLauncher(launch);
-            launcher.startRuntime(info, env);
-            final IStreamsProxy streamsProxy = launcher.getStreamsProxy();
+            try {
+                launcher.startRuntime(info, env);
+            } catch (IOException e) {
+                throw new NoBackendException(e);
+            }
+            IStreamsProxy streamsProxy = launcher.getStreamsProxy();
             b.setStreamsProxy(streamsProxy);
             b.setManaged(true);
         }
