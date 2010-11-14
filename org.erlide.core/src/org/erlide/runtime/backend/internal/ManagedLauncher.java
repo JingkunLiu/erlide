@@ -60,7 +60,7 @@ public class ManagedLauncher implements IDisposable {
         ErtsProcess erts = new ErtsProcess(launch, runtime, info.getNodeName(),
                 null);
         launch.addProcess(erts);
-        proxy = erts.getPrivateStreamsProxy();
+        proxy = erts.getStreamsProxy();
 
         checkIfRuntimeIsRunning();
         startWatcher(info, workingDirectory);
