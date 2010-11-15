@@ -144,6 +144,13 @@ public class RuntimeInfo {
     public String[] getCmdLine() {
         final List<String> result = new ArrayList<String>();
 
+        // FIXME wrapper might need a suffix anyway
+        // ssh needs erl cmdline as single arg
+        // lsfrun doesn't...
+        
+        ......
+        
+        
         String[] prefix = wrapperScript;
         for (String c : prefix) {
             result.add(c);
@@ -398,6 +405,16 @@ public class RuntimeInfo {
         }
     }
 
+    /**
+     * Wrapper script to start erl on remote nodes. Erl command line is appended
+     * by erlide to the provided value. Teh script must output the hostname on
+     * the console and wait for erl to end.
+     * 
+     * Example: <code>ssh user@other_host </code> will result in <code>
+     * > ssh user@other_host '/path/to/erl -sname asd -noshell'
+     * other_host
+     * </code>
+     */
     public String getWrapperScript() {
         return Joiner.on(" ").join(wrapperScript);
     }
