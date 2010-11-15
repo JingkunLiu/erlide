@@ -142,25 +142,30 @@ public class RuntimeInfo {
     }
 
     public String[] getCmdLine() {
+        final List<String> result = getErlCmdLine();
+
+        if (wrapperScript.length > 0) {
+            // String erlCmd = Joiner.on(" ").join(result);
+            List<String> erlCmd = Lists.newArrayList(result);
+            result.clear();
+            for (String c : wrapperScript) {
+                result.add(c);
+            }
+            result.addAll(erlCmd);
+        } else {
+            String erl = getOtpHome() + "/bin/erl";
+            if (erl.indexOf(' ') >= 0) {
+                erl = "\"" + erl + "\"";
+            }
+            result.add(0, erl);
+        }
+
+        return result.toArray(new String[result.size()]);
+    }
+
+    private List<String> getErlCmdLine() {
         final List<String> result = new ArrayList<String>();
 
-        // FIXME wrapper might need a suffix anyway
-        // ssh needs erl cmdline as single arg
-        // lsfrun doesn't...
-        
-        ......
-        
-        
-        String[] prefix = wrapperScript;
-        for (String c : prefix) {
-            result.add(c);
-        }
-
-        String erl = getOtpHome() + "/bin/erl";
-        if (erl.indexOf(' ') >= 0) {
-            erl = "\"" + erl + "\"";
-        }
-        result.add(erl);
         for (final String pathA : getPathA()) {
             if (!empty(pathA)) {
                 result.add("-pa");
@@ -201,8 +206,7 @@ public class RuntimeInfo {
                 result.add(cky);
             }
         }
-
-        return result.toArray(new String[result.size()]);
+        return result;
     }
 
     /**
@@ -406,14 +410,21 @@ public class RuntimeInfo {
     }
 
     /**
-     * Wrapper script to start erl on remote nodes. Erl command line is appended
-     * by erlide to the provided value. Teh script must output the hostname on
-     * the console and wait for erl to end.
+     * Wrapper script to start erl on remote nodes. Must have as last arg the
+     * erlang executable to be called. Erl command line is appended by erlide to
+     * the provided value. The script must output the hostname where the node
+     * was started on the console and wait for it to end.
+     * <p>
+     * If this is to be used for other backends than "build", the remote system
+     * must share filesystem with this one, so that it can access the project
+     * resources.
+     * <p>
+     * Example: <code> ssh user@other_host /path/to/erl </code> will result in
      * 
-     * Example: <code>ssh user@other_host </code> will result in <code>
-     * > ssh user@other_host '/path/to/erl -sname asd -noshell'
+     * <pre>
+     * > ssh user@other_host /path/to/erl -name asd@other_host -noshell more args
      * other_host
-     * </code>
+     * </pre>
      */
     public String getWrapperScript() {
         return Joiner.on(" ").join(wrapperScript);
