@@ -72,7 +72,8 @@ public final class BackendManager extends OtpNodeStatus implements
     public static final String[] SUPPORTED_MAIN_VERSIONS = new String[] { "",
             "R12B", "R13B", "R14A" };
     public static final String[] SUPPORTED_VERSIONS = new String[] { "",
-            "R12B-1", "R12B-2", "R12B-3", "R12B-4", "R12B-5", "R13B", "R14A" };
+            "R12B-1", "R12B-2", "R12B-3", "R12B-4", "R12B-5", "R13B", "R14A",
+            "R14B" };
 
     public enum BackendEvent {
         ADDED, REMOVED
@@ -217,6 +218,7 @@ public final class BackendManager extends OtpNodeStatus implements
             info.setNodeNameSuffix("_" + BackendUtils.getErlideNameTag());
             info.setCookie("erlide");
             info.hasConsole(false);
+
             // will add workspace unique id
             final EnumSet<BackendOptions> options = EnumSet.of(
                     BackendOptions.AUTOSTART, BackendOptions.NO_CONSOLE,
@@ -252,6 +254,10 @@ public final class BackendManager extends OtpNodeStatus implements
                     !options.contains(BackendOptions.NO_CONSOLE));
             workingCopy.setAttribute(ErlLaunchAttributes.INTERNAL,
                     options.contains(BackendOptions.INTERNAL));
+            workingCopy.setAttribute(ErlLaunchAttributes.WRAPPER_SCRIPT,
+                    info.getWrapperScript());
+            workingCopy.setAttribute(ErlLaunchAttributes.REMOTE_HOST,
+                    info.getRemoteHost());
             if (System.getProperty("erlide.internal.shortname", "false")
                     .equals("true")) {
                 workingCopy.setAttribute(ErlLaunchAttributes.USE_LONG_NAME,

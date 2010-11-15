@@ -39,6 +39,9 @@ public class RuntimeInfo {
     private boolean console = true;
     private boolean loadAllNodes = false;
 
+    private String wrapperScript = null;
+    private String remoteHost = null;
+
     public RuntimeInfo() {
         super();
         codePath = new ArrayList<String>();
@@ -64,6 +67,8 @@ public class RuntimeInfo {
         rt.useLongName = o.useLongName;
         rt.startShell = o.startShell;
         rt.loadAllNodes = o.loadAllNodes;
+        rt.wrapperScript = o.wrapperScript;
+        rt.remoteHost = o.remoteHost;
         return rt;
     }
 
@@ -374,6 +379,22 @@ public class RuntimeInfo {
 
     public boolean loadOnAllNodes() {
         return loadAllNodes;
+    }
+
+    public String getRemoteHost() {
+        return this.remoteHost;
+    }
+
+    public void setRemoteHost(String remoteHost) {
+        this.remoteHost = remoteHost;
+    }
+
+    public String getWrapperScript() {
+        return this.wrapperScript;
+    }
+
+    public void setWrapperScript(String wrapperScript) {
+        this.wrapperScript = wrapperScript;
     }
 
 }
