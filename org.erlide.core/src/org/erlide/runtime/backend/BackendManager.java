@@ -223,8 +223,6 @@ public final class BackendManager extends OtpNodeStatus implements
 
             info.setWrapperScript(System
                     .getProperty("erlide.buildBackend.wrapper"));
-            info.setRemoteHost(System
-                    .getProperty("erlide.buildBackend.remoteHost"));
 
             // will add workspace unique id
             final EnumSet<BackendOptions> options = EnumSet.of(
@@ -265,8 +263,6 @@ public final class BackendManager extends OtpNodeStatus implements
                     options.contains(BackendOptions.INTERNAL));
             workingCopy.setAttribute(ErlLaunchAttributes.WRAPPER_SCRIPT,
                     info.getWrapperScript());
-            workingCopy.setAttribute(ErlLaunchAttributes.REMOTE_HOST,
-                    info.getRemoteHost());
             if (System.getProperty("erlide.internal.shortname", "false")
                     .equals("true")) {
                 workingCopy.setAttribute(ErlLaunchAttributes.USE_LONG_NAME,
