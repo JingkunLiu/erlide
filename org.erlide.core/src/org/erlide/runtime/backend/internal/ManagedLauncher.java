@@ -15,7 +15,6 @@ import org.eclipse.core.runtime.Assert;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.model.IStreamsProxy;
 import org.erlide.core.erlang.util.ErlideUtil;
-import org.erlide.core.util.StringUtils;
 import org.erlide.jinterface.backend.IDisposable;
 import org.erlide.jinterface.backend.RuntimeInfo;
 import org.erlide.jinterface.util.ErlLogger;
@@ -51,7 +50,6 @@ public class ManagedLauncher implements IDisposable {
         }
 
         String[] cmds = info.getCmdLine();
-        cmds = adjustCmdlineForCoredump(cmds);
         final File workingDirectory = new File(info.getWorkingDir());
         ErlLogger.debug("START node :> " + Arrays.toString(cmds) + " *** "
                 + workingDirectory);
@@ -86,17 +84,6 @@ public class ManagedLauncher implements IDisposable {
             env.putAll(my_env);
         }
         return builder.start();
-    }
-
-    private String[] adjustCmdlineForCoredump(String[] cmds) {
-        String dump = System.getenv("erlide.internal.coredump");
-        if ("true".equals(dump) && !ErlideUtil.isOnWindows()
-                && ErlideUtil.isEricssonUser()) {
-            final String cmd = StringUtils.joinWithSpaces(cmds);
-            cmds = new String[] { "tcsh", "-c",
-                    "limit coredumpsize unlimited ;" + " exec " + cmd + " +d" };
-        }
-        return cmds;
     }
 
     private void startWatcher(final RuntimeInfo info,

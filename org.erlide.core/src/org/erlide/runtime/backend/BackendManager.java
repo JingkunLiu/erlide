@@ -221,12 +221,19 @@ public final class BackendManager extends OtpNodeStatus implements
             info.setCookie("erlide");
             info.hasConsole(false);
 
+            info.setWrapperScript(System
+                    .getProperty("erlide.buildBackend.wrapper"));
+            info.setRemoteHost(System
+                    .getProperty("erlide.buildBackend.remoteHost"));
+
             // will add workspace unique id
             final EnumSet<BackendOptions> options = EnumSet.of(
                     BackendOptions.AUTOSTART, BackendOptions.NO_CONSOLE,
                     BackendOptions.INTERNAL);
             b = createInternalBackend(info, options, null);
-            buildBackends.put(version, b);
+            if (b != null) {
+                buildBackends.put(version, b);
+            }
         }
         b.addProjectPath(project);
 
