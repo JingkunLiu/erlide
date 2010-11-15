@@ -110,6 +110,7 @@ public final class BackendManager extends OtpNodeStatus implements
         listeners = new ArrayList<BackendListener>();
         codeBundles = Maps.newHashMap();
 
+        ManagedLauncher.startEpmdProcess();
         epmdWatcher = new EpmdWatcher();
         epmdWatcher.addEpmdListener(this);
         new EpmdWatchJob(epmdWatcher).schedule(100);

@@ -235,9 +235,7 @@ public class Backend extends OtpNodeStatus {
 
     @SuppressWarnings("boxing")
     public synchronized void doConnect(final String label) {
-        ErlLogger.debug("connect to:: '" + label + "' "
-                + Thread.currentThread());
-        // Thread.dumpStack();
+        ErlLogger.debug(label + ": waiting connection from peer...");
         try {
             wait_for_epmd();
 

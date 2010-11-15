@@ -19,6 +19,7 @@ import org.erlide.jinterface.backend.IDisposable;
 import org.erlide.jinterface.backend.RuntimeInfo;
 import org.erlide.jinterface.util.ErlLogger;
 import org.erlide.runtime.backend.ErtsProcess;
+import org.erlide.runtime.backend.RuntimeInfoManager;
 
 public class ManagedLauncher implements IDisposable {
 
@@ -84,6 +85,29 @@ public class ManagedLauncher implements IDisposable {
             env.putAll(my_env);
         }
         return builder.start();
+    }
+
+    public static void startEpmdProcess() {
+        String path = getEpmdPath();
+        ProcessBuilder builder = new ProcessBuilder(new String[] { path });
+        try {
+            builder.start();
+        } catch (IOException e) {
+            ErlLogger.error(e);
+        }
+    }
+
+    private static String getEpmdPath() {
+        String home = RuntimeInfoManager.getDefault().getErlideRuntime()
+                .getOtpHome();
+        File root = new File(home);
+        String[] erts = root.list(new FilenameFilter() {
+
+            public boolean accept(File dir, String name) {
+                return name.startsWith("erts-");
+            }
+        });
+        return home + "/" + erts[0] + "/bin/epmd";
     }
 
     private void startWatcher(final RuntimeInfo info,
