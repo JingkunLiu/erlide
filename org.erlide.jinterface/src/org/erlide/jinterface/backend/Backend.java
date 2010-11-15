@@ -209,32 +209,7 @@ public class Backend extends OtpNodeStatus {
     }
 
     public void connect() {
-        doConnect(getName());
-    }
-
-    public void dispose() {
-        dispose(false);
-    }
-
-    public void dispose(final boolean restart) {
-        ErlLogger.debug("disposing backend " + getName());
-        if (shellManager != null) {
-            shellManager.dispose();
-        }
-
-        if (getNode() != null) {
-            getNode().close();
-        }
-        if (eventDaemon != null) {
-            eventDaemon.stop();
-        }
-        if (restart) {
-            return;
-        }
-    }
-
-    @SuppressWarnings("boxing")
-    public synchronized void doConnect(final String label) {
+        String label = getName();
         ErlLogger.debug(label + ": waiting connection to peer...");
         try {
             wait_for_epmd();
@@ -264,6 +239,27 @@ public class Backend extends OtpNodeStatus {
             ErlLogger.error(e);
             available = false;
             ErlLogger.error(COULD_NOT_CONNECT_TO_BACKEND);
+        }
+    }
+
+    public void dispose() {
+        dispose(false);
+    }
+
+    public void dispose(final boolean restart) {
+        ErlLogger.debug("disposing backend " + getName());
+        if (shellManager != null) {
+            shellManager.dispose();
+        }
+
+        if (getNode() != null) {
+            getNode().close();
+        }
+        if (eventDaemon != null) {
+            eventDaemon.stop();
+        }
+        if (restart) {
+            return;
         }
     }
 
@@ -304,8 +300,10 @@ public class Backend extends OtpNodeStatus {
         return fInfo.getNodeName();
     }
 
-    public synchronized String getPeer() {
-        return fPeer;
+    public String getPeer() {
+        synchronized (fPeer) {
+            return fPeer;
+        }
     }
 
     private synchronized OtpNode getNode() {
