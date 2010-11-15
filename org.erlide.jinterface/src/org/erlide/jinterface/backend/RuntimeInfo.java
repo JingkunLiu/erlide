@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 public class RuntimeInfo {
@@ -42,7 +43,7 @@ public class RuntimeInfo {
     private boolean console = true;
     private boolean loadAllNodes = false;
 
-    private String wrapperScript = null;
+    private String[] wrapperScript = null;
 
     public RuntimeInfo() {
         super();
@@ -143,7 +144,7 @@ public class RuntimeInfo {
     public String[] getCmdLine() {
         final List<String> result = new ArrayList<String>();
 
-        String[] prefix = getWrapperPrefix();
+        String[] prefix = wrapperScript;
         for (String c : prefix) {
             result.add(c);
         }
@@ -193,30 +194,7 @@ public class RuntimeInfo {
             }
         }
 
-        String[] suffix = getWrapperSuffix();
-        for (String c : suffix) {
-            result.add(c);
-        }
         return result.toArray(new String[result.size()]);
-    }
-
-    private String[] getWrapperSuffix() {
-        if (wrapperScript == null) {
-            return NOTHING;
-        }
-        String[] fix = wrapperScript.split("<>");
-        if (fix.length < 2) {
-            return NOTHING;
-        } else {
-            return fix[1].split(" ");
-        }
-    }
-
-    private String[] getWrapperPrefix() {
-        if (wrapperScript == null) {
-            return NOTHING;
-        }
-        return wrapperScript.split("<>")[0].split(" ");
     }
 
     /**
@@ -410,22 +388,13 @@ public class RuntimeInfo {
         return loadAllNodes;
     }
 
-    /**
-     * command line for a script to start erl remotely, where the actual command
-     * line params (including the erl binary) are denotated with <> (or are
-     * implicitly added at the end)
-     */
-    public String getWrapperScript() {
-        return this.wrapperScript;
+    public void setWrapperScript(String wrapper) {
+        // XXX: can't have quoted args with spaces
+        this.wrapperScript = wrapper.split(" ");
     }
 
-    /**
-     * command line for a script to start erl remotely, where the actual command
-     * line params (including the erl binary) are denotated with <> (or are
-     * implicitly added at the end)
-     */
-    public void setWrapperScript(String wrapperScript) {
-        this.wrapperScript = wrapperScript;
+    public String getWrapperScript() {
+        return Joiner.on(" ").join(wrapperScript);
     }
 
 }
