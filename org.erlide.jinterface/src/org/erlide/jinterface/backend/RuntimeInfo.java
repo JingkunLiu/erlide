@@ -43,7 +43,7 @@ public class RuntimeInfo {
     private boolean console = true;
     private boolean loadAllNodes = false;
 
-    private String[] wrapperScript = null;
+    private String[] wrapperScript = NOTHING;
 
     public RuntimeInfo() {
         super();
@@ -184,7 +184,8 @@ public class RuntimeInfo {
                 : "-sname";
         String nameOption = "";
         if (!getNodeName().equals("")) {
-            nameOption = BackendUtil.buildNodeName(getNodeName(), useLongName);
+            nameOption = BackendUtil.buildLocalNodeName(getNodeName(),
+                    useLongName);
             result.add(nameTag);
             result.add(nameOption);
             final String cky = getCookie();
@@ -390,7 +391,11 @@ public class RuntimeInfo {
 
     public void setWrapperScript(String wrapper) {
         // XXX: can't have quoted args with spaces
-        this.wrapperScript = wrapper.split(" ");
+        if (wrapper == null) {
+            this.wrapperScript = NOTHING;
+        } else {
+            this.wrapperScript = wrapper.split(" ");
+        }
     }
 
     public String getWrapperScript() {

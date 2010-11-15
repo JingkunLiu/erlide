@@ -154,7 +154,11 @@ public final class BackendManager extends OtpNodeStatus implements
         if (launch != null) {
             DebugPlugin.getDefault().getLaunchManager().addLaunchListener(b);
         }
-        initializeBackend(options, b, watch);
+        try {
+            initializeBackend(options, b, watch);
+        } catch (IOException e) {
+            ErlLogger.error(e);
+        }
         return b;
     }
 
@@ -165,7 +169,7 @@ public final class BackendManager extends OtpNodeStatus implements
     }
 
     private void initializeBackend(final Set<BackendOptions> options,
-            final ErlideBackend b, final boolean watchNode) {
+            ErlideBackend b, boolean watchNode) throws IOException {
         b.initializeRuntime();
         if (b.isDistributed()) {
             b.connect();
@@ -455,7 +459,8 @@ public final class BackendManager extends OtpNodeStatus implements
                     .entrySet()) {
                 for (final Backend be : e.getValue()) {
                     final String bnode = be.getInfo().getNodeName();
-                    if (BackendUtil.buildNodeName(bnode, true).equals(node)) {
+                    if (BackendUtil.buildLocalNodeName(bnode, true)
+                            .equals(node)) {
                         removeExecutionBackend(e.getKey(), be);
                         break;
                     }
