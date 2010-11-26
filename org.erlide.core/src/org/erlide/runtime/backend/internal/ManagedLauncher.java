@@ -50,14 +50,14 @@ public class ManagedLauncher implements IDisposable {
             return;
         }
 
-        String[] cmds = info.getCmdLine();
+        final String[] cmds = info.getCmdLine();
         final File workingDirectory = new File(info.getWorkingDir());
         ErlLogger.debug("START node :> " + Arrays.toString(cmds) + " *** "
                 + workingDirectory);
 
         runtime = startRuntimeProcess(my_env, cmds, workingDirectory);
-        ErtsProcess erts = new ErtsProcess(launch, runtime, info.getNodeName(),
-                null);
+        final ErtsProcess erts = new ErtsProcess(launch, runtime,
+                info.getNodeName(), null);
         launch.addProcess(erts);
         proxy = erts.getStreamsProxy();
 
@@ -68,16 +68,17 @@ public class ManagedLauncher implements IDisposable {
     private void checkIfRuntimeIsRunning() {
         try {
             ErlLogger.debug("exit code: %d", runtime.exitValue());
-        } catch (IllegalThreadStateException e) {
+        } catch (final IllegalThreadStateException e) {
             ErlLogger.debug("process is running");
         }
     }
 
     private Process startRuntimeProcess(final Map<String, String> my_env,
-            String[] cmds, final File workingDirectory) throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(cmds);
+            final String[] cmds, final File workingDirectory)
+            throws IOException {
+        final ProcessBuilder builder = new ProcessBuilder(cmds);
         builder.directory(workingDirectory);
-        Map<String, String> env = builder.environment();
+        final Map<String, String> env = builder.environment();
         if (!ErlideUtil.isOnWindows() && ErlideUtil.isEricssonUser()) {
             env.put("TCL_LIBRARY", "/usr/share/tcl/tcl8.4/");
         }
@@ -88,22 +89,22 @@ public class ManagedLauncher implements IDisposable {
     }
 
     public static void startEpmdProcess() {
-        String path = getEpmdPath();
-        ProcessBuilder builder = new ProcessBuilder(new String[] { path });
+        final String path = getEpmdPath();
+        final ProcessBuilder builder = new ProcessBuilder(new String[] { path });
         try {
             builder.start();
-        } catch (IOException e) {
+        } catch (final IOException e) {
             ErlLogger.error(e);
         }
     }
 
     private static String getEpmdPath() {
-        String home = RuntimeInfoManager.getDefault().getErlideRuntime()
+        final String home = RuntimeInfoManager.getDefault().getErlideRuntime()
                 .getOtpHome();
-        File root = new File(home);
-        String[] erts = root.list(new FilenameFilter() {
+        final File root = new File(home);
+        final String[] erts = root.list(new FilenameFilter() {
 
-            public boolean accept(File dir, String name) {
+            public boolean accept(final File dir, final String name) {
                 return name.startsWith("erts-");
             }
         });
@@ -129,8 +130,8 @@ public class ManagedLauncher implements IDisposable {
         private final RuntimeInfo info;
         private final Process runtime;
 
-        private WatcherRunnable(Process runtime, File workingDirectory,
-                RuntimeInfo info) {
+        private WatcherRunnable(final Process runtime,
+                final File workingDirectory, final RuntimeInfo info) {
             this.runtime = runtime;
             this.workingDirectory = workingDirectory;
             this.info = info;
@@ -148,7 +149,7 @@ public class ManagedLauncher implements IDisposable {
                 // 129 = SIGHUP (probably logout, ignore)
                 // 143 = SIGTERM (probably logout, ignore)
                 // 137 = SIGKILL (probably killed by user)
-                if ((v > 1) && (v != 143) && (v != 129) && (v != 137)
+                if (v > 1 && v != 143 && v != 129 && v != 137
                         && ErlideUtil.isEricssonUser()) {
                     createReport(info, workingDirectory, v, msg);
                 }
@@ -199,15 +200,15 @@ public class ManagedLauncher implements IDisposable {
 
         private static String createCoreDump(final File workingDirectory,
                 String createdDump) {
-            File[] dumps = getCoreDumpFiles(workingDirectory);
+            final File[] dumps = getCoreDumpFiles(workingDirectory);
             if (dumps.length != 0) {
-                File dump = dumps[0];
+                final File dump = dumps[0];
                 final File dest = new File(ErlideUtil.getReportLocation() + "/"
                         + dump.getName());
                 try {
                     move(dump, dest);
                     createdDump = dest.getPath();
-                } catch (IOException e) {
+                } catch (final IOException e) {
                     final String errmsg = "Core dump file %s could not be moved to %s";
                     ErlLogger.warn(errmsg, dump.getPath(), dest.getPath());
                 }
@@ -217,10 +218,10 @@ public class ManagedLauncher implements IDisposable {
 
         private static void move(final File in, final File out)
                 throws IOException {
-            InputStream ins = new FileInputStream(in);
-            OutputStream outs = new FileOutputStream(out);
+            final InputStream ins = new FileInputStream(in);
+            final OutputStream outs = new FileOutputStream(out);
             try {
-                byte[] buf = new byte[1024];
+                final byte[] buf = new byte[1024];
                 int len;
                 while ((len = ins.read(buf)) > 0) {
                     outs.write(buf, 0, len);
@@ -233,11 +234,11 @@ public class ManagedLauncher implements IDisposable {
         }
 
         private void deleteOldCoreDumps(final File workingDirectory) {
-            File[] fs = getCoreDumpFiles(workingDirectory);
+            final File[] fs = getCoreDumpFiles(workingDirectory);
             if (fs == null) {
                 return;
             }
-            for (File f : fs) {
+            for (final File f : fs) {
                 f.delete();
             }
         }
@@ -249,7 +250,7 @@ public class ManagedLauncher implements IDisposable {
         };
 
         private static File[] getCoreDumpFiles(final File workingDirectory) {
-            File[] fs = workingDirectory.listFiles(filter);
+            final File[] fs = workingDirectory.listFiles(filter);
             return fs;
         }
     }

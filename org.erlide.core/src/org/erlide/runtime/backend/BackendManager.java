@@ -138,10 +138,10 @@ public final class BackendManager extends OtpNodeStatus implements
             final ManagedLauncher launcher = new ManagedLauncher(launch);
             try {
                 launcher.startRuntime(info, env);
-                IStreamsProxy streamsProxy = launcher.getStreamsProxy();
+                final IStreamsProxy streamsProxy = launcher.getStreamsProxy();
                 b.setStreamsProxy(streamsProxy);
                 b.setManaged(true);
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 throw new NoBackendException(e);
             }
         }
@@ -156,20 +156,20 @@ public final class BackendManager extends OtpNodeStatus implements
         }
         try {
             initializeBackend(options, b, watch);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             ErlLogger.error(e);
         }
         return b;
     }
 
-    private void addBackend(ErlideBackend b) {
+    private void addBackend(final ErlideBackend b) {
         synchronized (allBackends) {
             allBackends.add(b);
         }
     }
 
     private void initializeBackend(final Set<BackendOptions> options,
-            ErlideBackend b, boolean watchNode) throws IOException {
+            final ErlideBackend b, final boolean watchNode) throws IOException {
         b.initializeRuntime();
         if (b.isDistributed()) {
             b.connect();

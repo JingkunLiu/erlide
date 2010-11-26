@@ -209,7 +209,7 @@ public class Backend extends OtpNodeStatus {
     }
 
     public void connect() {
-        String label = getName();
+        final String label = getName();
         ErlLogger.debug(label + ": waiting connection to peer...");
         try {
             wait_for_epmd();
@@ -362,7 +362,7 @@ public class Backend extends OtpNodeStatus {
         }
         final String nodeCookie = fNode.cookie();
         final int len = nodeCookie.length();
-        final String trimmed = (len > 7) ? nodeCookie.substring(0, 7)
+        final String trimmed = len > 7 ? nodeCookie.substring(0, 7)
                 : nodeCookie;
         ErlLogger.debug("using cookie '%s...'%d (info: '%s')", trimmed, len,
                 cookie);
@@ -486,7 +486,7 @@ public class Backend extends OtpNodeStatus {
             initializeRuntime();
             connect();
             initErlang(monitor, watch);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             ErlLogger.error(e);
         }
     }

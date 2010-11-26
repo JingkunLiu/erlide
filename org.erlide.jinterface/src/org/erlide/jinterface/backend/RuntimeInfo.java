@@ -127,7 +127,7 @@ public class RuntimeInfo {
     }
 
     public String getWorkingDir() {
-        return (workingDir == null || workingDir.length() == 0) ? "."
+        return workingDir == null || workingDir.length() == 0 ? "."
                 : workingDir;
     }
 
@@ -146,9 +146,9 @@ public class RuntimeInfo {
 
         if (wrapperScript.length > 0) {
             // String erlCmd = Joiner.on(" ").join(result);
-            List<String> erlCmd = Lists.newArrayList(result);
+            final List<String> erlCmd = Lists.newArrayList(result);
             result.clear();
-            for (String c : wrapperScript) {
+            for (final String c : wrapperScript) {
                 result.add(c);
             }
             result.addAll(erlCmd);
@@ -180,8 +180,8 @@ public class RuntimeInfo {
         }
         final String gotArgs = getArgs();
         if (!empty(gotArgs)) {
-            String[] xargs = split(gotArgs);
-            for (String a : xargs) {
+            final String[] xargs = split(gotArgs);
+            for (final String a : xargs) {
                 result.add(a);
             }
         }
@@ -192,7 +192,7 @@ public class RuntimeInfo {
 
         final boolean globalLongName = System.getProperty("erlide.longname",
                 "false").equals("true");
-        final String nameTag = (useLongName || globalLongName) ? "-name"
+        final String nameTag = useLongName || globalLongName ? "-name"
                 : "-sname";
         String nameOption = "";
         if (!getNodeName().equals("")) {
@@ -216,9 +216,9 @@ public class RuntimeInfo {
      * @return
      */
     private String[] split(final String args) {
-        Pattern p = Pattern.compile("(\"[^\"]*?\"|'[^']*?'|\\S+)");
-        Matcher m = p.matcher(args);
-        List<String> tokens = new ArrayList<String>();
+        final Pattern p = Pattern.compile("(\"[^\"]*?\"|'[^']*?'|\\S+)");
+        final Matcher m = p.matcher(args);
+        final List<String> tokens = new ArrayList<String>();
         while (m.find()) {
             tokens.add(m.group(1));
         }
@@ -346,12 +346,12 @@ public class RuntimeInfo {
             return false;
         }
 
-        boolean hasErlc = hasExecutableFile(otpHome + "/bin/erlc");
+        final boolean hasErlc = hasExecutableFile(otpHome + "/bin/erlc");
         return hasErlc;
     }
 
     protected static String cvt(final Collection<String> path) {
-        StringBuilder result = new StringBuilder();
+        final StringBuilder result = new StringBuilder();
         for (String s : path) {
             if (s.length() > 0) {
                 if (s.contains(" ")) {
@@ -392,7 +392,7 @@ public class RuntimeInfo {
         return console;
     }
 
-    public void setLoadAllNodes(boolean loadAllNodes) {
+    public void setLoadAllNodes(final boolean loadAllNodes) {
         this.loadAllNodes = loadAllNodes;
     }
 
@@ -400,12 +400,12 @@ public class RuntimeInfo {
         return loadAllNodes;
     }
 
-    public void setWrapperScript(String wrapper) {
+    public void setWrapperScript(final String wrapper) {
         // XXX: can't have quoted args with spaces
         if (wrapper == null) {
-            this.wrapperScript = NOTHING;
+            wrapperScript = NOTHING;
         } else {
-            this.wrapperScript = wrapper.split(" ");
+            wrapperScript = wrapper.split(" ");
         }
     }
 

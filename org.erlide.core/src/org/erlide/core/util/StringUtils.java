@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+
 public class StringUtils {
 
     private StringUtils() {
@@ -21,7 +22,7 @@ public class StringUtils {
     public static final Object EMPTY = "";
 
     public static String joinWithSpaces(final String[] cmds) {
-        List<String> cs = Lists.newArrayList();
+        final List<String> cs = Lists.newArrayList();
         for (String c : cmds) {
             if (c.contains(" ")) {
                 c = "\"" + c + "\"";
