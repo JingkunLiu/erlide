@@ -15,8 +15,8 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
-import org.erlide.ui.ErlideUIPlugin;
 import org.erlide.ui.editors.erl.folding.IErlangFoldingPreferenceBlock;
+import org.erlide.ui.internal.ErlideUIPlugin;
 import org.erlide.ui.prefs.PreferenceConstants;
 import org.erlide.ui.util.OverlayPreferenceStore;
 import org.erlide.ui.util.OverlayPreferenceStore.OverlayKey;
@@ -25,149 +25,121 @@ import org.erlide.ui.util.OverlayPreferenceStore.TypeDescriptor;
 /**
  * Erlang (erlide) default folding preferences.
  */
-public class DefaultErlangFoldingPreferenceBlock implements
-		IErlangFoldingPreferenceBlock {
+public class DefaultErlangFoldingPreferenceBlock implements IErlangFoldingPreferenceBlock {
 
-	private final IPreferenceStore fStore;
+    private final IPreferenceStore fStore;
 
-	OverlayPreferenceStore fOverlayStore;
+    OverlayPreferenceStore fOverlayStore;
 
-	private final OverlayKey[] fKeys;
+    private final OverlayKey[] fKeys;
 
-	Map<Button, String> fCheckBoxes = new HashMap<Button, String>();
+    Map<Button, String> fCheckBoxes = new HashMap<Button, String>();
 
-	private final SelectionListener fCheckBoxListener = new SelectionListener() {
+    private final SelectionListener fCheckBoxListener = new SelectionListener() {
 
-		public void widgetDefaultSelected(final SelectionEvent e) {
-		}
+        @Override
+        public void widgetDefaultSelected(final SelectionEvent e) {
+        }
 
-		public void widgetSelected(final SelectionEvent e) {
-			final Button button = (Button) e.widget;
-			fOverlayStore.setValue(fCheckBoxes.get(button), button
-					.getSelection());
-		}
-	};
+        @Override
+        public void widgetSelected(final SelectionEvent e) {
+            final Button button = (Button) e.widget;
+            fOverlayStore.setValue(fCheckBoxes.get(button), button.getSelection());
+        }
+    };
 
-	public DefaultErlangFoldingPreferenceBlock() {
-		fStore = ErlideUIPlugin.getDefault().getPreferenceStore();
-		fKeys = createKeys();
-		fOverlayStore = new OverlayPreferenceStore(fStore, fKeys);
-	}
+    public DefaultErlangFoldingPreferenceBlock() {
+        fStore = ErlideUIPlugin.getDefault().getPreferenceStore();
+        fKeys = createKeys();
+        fOverlayStore = new OverlayPreferenceStore(fStore, fKeys);
+    }
 
-	private OverlayKey[] createKeys() {
-		final ArrayList<OverlayKey> overlayKeys = new ArrayList<OverlayKey>();
+    private OverlayKey[] createKeys() {
+        final ArrayList<OverlayKey> overlayKeys = new ArrayList<OverlayKey>();
 
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(
-				TypeDescriptor.BOOLEAN,
-				PreferenceConstants.EDITOR_FOLDING_CLAUSES));
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(
-				TypeDescriptor.BOOLEAN,
-				PreferenceConstants.EDITOR_FOLDING_COMMENTS));
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(
-				TypeDescriptor.BOOLEAN,
-				PreferenceConstants.EDITOR_FOLDING_HEADER_COMMENTS));
-		overlayKeys.add(new OverlayPreferenceStore.OverlayKey(
-				TypeDescriptor.BOOLEAN,
-				PreferenceConstants.EDITOR_FOLDING_TYPESPECS));
+        overlayKeys.add(new OverlayPreferenceStore.OverlayKey(TypeDescriptor.BOOLEAN,
+                PreferenceConstants.EDITOR_FOLDING_CLAUSES));
+        overlayKeys.add(new OverlayPreferenceStore.OverlayKey(TypeDescriptor.BOOLEAN,
+                PreferenceConstants.EDITOR_FOLDING_COMMENTS));
+        overlayKeys.add(new OverlayPreferenceStore.OverlayKey(TypeDescriptor.BOOLEAN,
+                PreferenceConstants.EDITOR_FOLDING_HEADER_COMMENTS));
+        overlayKeys.add(new OverlayPreferenceStore.OverlayKey(TypeDescriptor.BOOLEAN,
+                PreferenceConstants.EDITOR_FOLDING_TYPESPECS));
 
-		return overlayKeys.toArray(new OverlayKey[overlayKeys.size()]);
-	}
+        return overlayKeys.toArray(new OverlayKey[overlayKeys.size()]);
+    }
 
-	/*
-	 * @seeorg.eclipse.jdt.internal.ui.text.folding.IJavaFoldingPreferences#
-	 * createControl(org.eclipse.swt.widgets.Group)
-	 */
-	public Control createControl(final Composite composite) {
-		fOverlayStore.load();
-		fOverlayStore.start();
+    @Override
+    public Control createControl(final Composite composite) {
+        fOverlayStore.load();
+        fOverlayStore.start();
 
-		final Composite inner = new Composite(composite, SWT.NONE);
-		final GridLayout layout = new GridLayout(1, true);
-		layout.verticalSpacing = 3;
-		layout.marginWidth = 0;
-		inner.setLayout(layout);
+        final Composite inner = new Composite(composite, SWT.NONE);
+        final GridLayout layout = new GridLayout(1, true);
+        layout.verticalSpacing = 3;
+        layout.marginWidth = 0;
+        inner.setLayout(layout);
 
-		final Label label = new Label(inner, SWT.LEFT);
-		label
-				.setText(FoldingMessages.DefaultErlangFoldingPreferenceBlock_title);
+        final Label label = new Label(inner, SWT.LEFT);
+        label.setText(FoldingMessages.DefaultErlangFoldingPreferenceBlock_title);
 
-		addCheckBox(
-				inner,
-				FoldingMessages.DefaultErlangFoldingPreferenceBlock_header_comments,
-				PreferenceConstants.EDITOR_FOLDING_HEADER_COMMENTS, 0);
-		addCheckBox(inner,
-				FoldingMessages.DefaultErlangFoldingPreferenceBlock_clauses,
-				PreferenceConstants.EDITOR_FOLDING_CLAUSES, 0);
-		addCheckBox(inner,
-				FoldingMessages.DefaultErlangFoldingPreferenceBlock_comments,
-				PreferenceConstants.EDITOR_FOLDING_COMMENTS, 0);
-		addCheckBox(inner,
-				FoldingMessages.DefaultErlangFoldingPreferenceBlock_typespecs,
-				PreferenceConstants.EDITOR_FOLDING_TYPESPECS, 0);
+        addCheckBox(inner,
+                FoldingMessages.DefaultErlangFoldingPreferenceBlock_header_comments,
+                PreferenceConstants.EDITOR_FOLDING_HEADER_COMMENTS, 0);
+        addCheckBox(inner, FoldingMessages.DefaultErlangFoldingPreferenceBlock_clauses,
+                PreferenceConstants.EDITOR_FOLDING_CLAUSES, 0);
+        addCheckBox(inner, FoldingMessages.DefaultErlangFoldingPreferenceBlock_comments,
+                PreferenceConstants.EDITOR_FOLDING_COMMENTS, 0);
+        addCheckBox(inner, FoldingMessages.DefaultErlangFoldingPreferenceBlock_typespecs,
+                PreferenceConstants.EDITOR_FOLDING_TYPESPECS, 0);
 
-		return inner;
-	}
+        return inner;
+    }
 
-	private Button addCheckBox(final Composite parent, final String label,
-			final String key, final int indentation) {
-		final Button checkBox = new Button(parent, SWT.CHECK);
-		checkBox.setText(label);
+    private Button addCheckBox(final Composite parent, final String label,
+            final String key, final int indentation) {
+        final Button checkBox = new Button(parent, SWT.CHECK);
+        checkBox.setText(label);
 
-		final GridData gd = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
-		gd.horizontalIndent = indentation;
-		gd.horizontalSpan = 1;
-		gd.grabExcessVerticalSpace = false;
-		checkBox.setLayoutData(gd);
-		checkBox.addSelectionListener(fCheckBoxListener);
+        final GridData gd = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
+        gd.horizontalIndent = indentation;
+        gd.horizontalSpan = 1;
+        gd.grabExcessVerticalSpace = false;
+        checkBox.setLayoutData(gd);
+        checkBox.addSelectionListener(fCheckBoxListener);
 
-		fCheckBoxes.put(checkBox, key);
+        fCheckBoxes.put(checkBox, key);
 
-		return checkBox;
-	}
+        return checkBox;
+    }
 
-	private void initializeFields() {
-		final Iterator<Button> it = fCheckBoxes.keySet().iterator();
-		while (it.hasNext()) {
-			final Button b = it.next();
-			final String key = fCheckBoxes.get(b);
-			b.setSelection(fOverlayStore.getBoolean(key));
-		}
-	}
+    private void initializeFields() {
+        final Iterator<Button> it = fCheckBoxes.keySet().iterator();
+        while (it.hasNext()) {
+            final Button b = it.next();
+            final String key = fCheckBoxes.get(b);
+            b.setSelection(fOverlayStore.getBoolean(key));
+        }
+    }
 
-	/*
-	 * @see
-	 * org.eclipse.jdt.internal.ui.text.folding.AbstractJavaFoldingPreferences
-	 * #performOk()
-	 */
-	public void performOk() {
-		fOverlayStore.propagate();
-	}
+    @Override
+    public void performOk() {
+        fOverlayStore.propagate();
+    }
 
-	/*
-	 * @see
-	 * org.eclipse.jdt.internal.ui.text.folding.AbstractJavaFoldingPreferences
-	 * #initialize()
-	 */
-	public void initialize() {
-		initializeFields();
-	}
+    @Override
+    public void initialize() {
+        initializeFields();
+    }
 
-	/*
-	 * @see
-	 * org.eclipse.jdt.internal.ui.text.folding.AbstractJavaFoldingPreferences
-	 * #performDefaults()
-	 */
-	public void performDefaults() {
-		fOverlayStore.loadDefaults();
-		initializeFields();
-	}
+    @Override
+    public void performDefaults() {
+        fOverlayStore.loadDefaults();
+        initializeFields();
+    }
 
-	/*
-	 * @see
-	 * org.eclipse.jdt.internal.ui.text.folding.AbstractJavaFoldingPreferences
-	 * #dispose()
-	 */
-	public void dispose() {
-		fOverlayStore.stop();
-	}
+    @Override
+    public void dispose() {
+        fOverlayStore.stop();
+    }
 }

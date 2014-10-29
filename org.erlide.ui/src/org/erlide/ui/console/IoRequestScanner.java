@@ -10,113 +10,125 @@
  *******************************************************************************/
 package org.erlide.ui.console;
 
-import org.eclipse.core.runtime.Assert;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.rules.IPartitionTokenScanner;
 import org.eclipse.jface.text.rules.IToken;
-import org.erlide.jinterface.backend.BackendShell;
-import org.erlide.jinterface.backend.console.IoRequest;
+import org.erlide.runtime.shell.IBackendShell;
+import org.erlide.runtime.shell.IoRequest;
 
 public class IoRequestScanner implements IPartitionTokenScanner {
 
-	private final BackendShell model;
-	private int docOffset;
-	private int docLength;
-	private int crtOffset;
-	private int crtLength;
+    private final IBackendShell model;
+    private int docOffset;
+    private int docLength;
+    private int crtOffset;
+    private int crtLength;
 
-	public IoRequestScanner(final BackendShell model) {
-		Assert.isNotNull(model);
-		this.model = model;
-	}
+    public IoRequestScanner(final IBackendShell model) {
+        assertThat(model, is(not(nullValue())));
+        this.model = model;
+    }
 
-	public void setPartialRange(final IDocument document, final int offset,
-			final int length, final String contentType,
-			final int partitionOffset) {
-		docOffset = offset;
-		docLength = length;
-		IoRequest req = model.findAtPos(docOffset);
-		if (req != null) {
-			crtOffset = req.getStart();
-		} else {
-			crtOffset = -1;
-		}
-		crtLength = 0;
-	}
+    @Override
+    public void setPartialRange(final IDocument document, final int offset,
+            final int length, final String contentType, final int partitionOffset) {
+        docOffset = offset;
+        docLength = length;
+        final IoRequest req = model.findAtPos(docOffset);
+        if (req != null) {
+            crtOffset = req.getStart();
+        } else {
+            crtOffset = -1;
+        }
+        crtLength = 0;
+    }
 
-	public int getTokenLength() {
-		if (crtOffset + crtLength > docLength) {
-			return crtLength - (docLength - crtOffset);
-		}
-		return crtLength;
-	}
+    @Override
+    public int getTokenLength() {
+        if (crtOffset + crtLength > docLength) {
+            return crtLength - (docLength - crtOffset);
+        }
+        return crtLength;
+    }
 
-	public int getTokenOffset() {
-		return crtOffset;
-	}
+    @Override
+    public int getTokenOffset() {
+        return crtOffset;
+    }
 
-	public IToken nextToken() {
-		IoRequest req;
-		crtOffset = crtOffset + crtLength;
-		if (crtOffset > docOffset + docLength) {
-			return new IoRequestToken(null);
-		}
-		req = model.findAtPos(crtOffset);
-		if (req != null) {
-			crtLength = req.getLength();
-		}
-		IoRequestToken token = new IoRequestToken(req);
-		return token;
-	}
+    @Override
+    public IToken nextToken() {
+        IoRequest req;
+        crtOffset = crtOffset + crtLength;
+        if (crtOffset > docOffset + docLength) {
+            return new IoRequestToken(null);
+        }
+        req = model.findAtPos(crtOffset);
+        if (req != null) {
+            crtLength = req.getLength();
+        }
+        final IoRequestToken token = new IoRequestToken(req);
+        return token;
+    }
 
-	public void setRange(final IDocument document, final int offset,
-			final int length) {
-		docOffset = offset;
-		docLength = length;
-		IoRequest req = model.findAtPos(docOffset);
-		if (req != null) {
-			crtOffset = req.getStart();
-		} else {
-			crtOffset = -1;
-		}
-		crtLength = 0;
-	}
+    @Override
+    public void setRange(final IDocument document, final int offset, final int length) {
+        docOffset = offset;
+        docLength = length;
+        final IoRequest req = model.findAtPos(docOffset);
+        if (req != null) {
+            crtOffset = req.getStart();
+        } else {
+            crtOffset = -1;
+        }
+        crtLength = 0;
+    }
 
-	private static class IoRequestToken implements IToken {
+    private static class IoRequestToken implements IToken {
 
-		private final String data;
+        private final String data;
 
-		public IoRequestToken(final IoRequest req) {
-			if (req == null) {
-				data = null;
-			} else {
-				this.data = req.getKind().name();
-			}
-		}
+        public IoRequestToken(final IoRequest req) {
+            if (req == null) {
+                data = null;
+            } else {
+                data = req.getKind().name();
+            }
+        }
 
-		public Object getData() {
-			return data;
-		}
+        @Override
+        public Object getData() {
+            return data;
+        }
 
-		public boolean isEOF() {
-			return data == null;
-		}
+        @Override
+        public boolean isEOF() {
+            return data == null;
+        }
 
-		public boolean isOther() {
-			return true;
-		}
+        @Override
+        public boolean isOther() {
+            return true;
+        }
 
-		public boolean isUndefined() {
-			return false;
-		}
+        @Override
+        public boolean isUndefined() {
+            return false;
+        }
 
-		public boolean isWhitespace() {
-			return false;
-		}
+        @Override
+        public boolean isWhitespace() {
+            return false;
+        }
 
-		@Override
-		public String toString() {
-			return "TOK:" + data;
-		}
-	}
+        @Override
+        public String toString() {
+            return "TOK:" + data;
+        }
+    }
 }

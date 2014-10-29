@@ -10,14 +10,14 @@
  *******************************************************************************/
 package org.erlide.ui.internal.search;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelection;
@@ -25,56 +25,54 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchSite;
-import org.eclipse.ui.IWorkingSet;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.TextEditor;
-import org.eclipse.ui.progress.IProgressService;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlAttribute;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlFunctionClause;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.core.erlang.IErlPreprocessorDef;
-import org.erlide.core.text.ErlangToolkit;
-import org.erlide.jinterface.backend.Backend;
-import org.erlide.jinterface.backend.BackendException;
-import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.core.services.search.SearchCoreUtil;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.erlang.IErlAttribute;
+import org.erlide.engine.model.erlang.IErlFunctionClause;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.erlang.IErlPreprocessorDef;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.engine.services.search.ErlSearchScope;
+import org.erlide.engine.services.search.ErlangSearchPattern;
+import org.erlide.engine.services.search.LimitTo;
+import org.erlide.engine.services.search.OpenResult;
+import org.erlide.engine.services.search.OpenService;
+import org.erlide.engine.services.search.SearchPatternFactory;
 import org.erlide.ui.actions.SelectionDispatchAction;
-import org.erlide.ui.editors.erl.ErlangEditor;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 import org.erlide.ui.internal.ExceptionHandler;
-import org.erlide.ui.util.ErlModelUtils;
+import org.erlide.util.ErlLogger;
 
-import erlang.ErlangSearchPattern;
-import erlang.ErlangSearchPattern.LimitTo;
-import erlang.ErlideOpen;
-import erlang.OpenResult;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
- * Abstract class for Java search actions.
+ * Abstract class for Erlang search actions.
  * <p>
  * Note: This class is for internal use only. Clients should not use this class.
  * </p>
- * 
+ *
  * @since 2.0
  */
 public abstract class FindAction extends SelectionDispatchAction {
 
     // A dummy which can't be selected in the UI
-    // private static final IErlElement RETURN_WITHOUT_BEEP = JavaCore
-    // .create(JavaPlugin.getWorkspace().getRoot());
+    // private static final IErlElement RETURN_WITHOUT_BEEP = ErlangCore
+    // .create(ErlangPlugin.getWorkspace().getRoot());
 
-    private ErlangEditor fEditor;
+    private AbstractErlangEditor fEditor;
 
     FindAction(final IWorkbenchSite site) {
         super(site);
         init();
     }
 
-    FindAction(final ErlangEditor editor) {
+    FindAction(final AbstractErlangEditor editor) {
         this(editor.getEditorSite());
         fEditor = editor;
-        setEnabled(true); // FIXME kolla selection, sno grejer fr�n open
-        // kanske...
+        setEnabled(true); // FIXME check selection, steal stuff from 'open'
     }
 
     /**
@@ -85,8 +83,7 @@ public abstract class FindAction extends SelectionDispatchAction {
     abstract void init();
 
     private boolean canOperateOn(final IStructuredSelection sel) {
-        return sel != null && !sel.isEmpty()
-                && canOperateOn(getErlElement(sel, true));
+        return sel != null && !sel.isEmpty() && canOperateOn(getErlElement(sel, true));
     }
 
     boolean canOperateOn(final IErlElement element) {
@@ -117,8 +114,7 @@ public abstract class FindAction extends SelectionDispatchAction {
     // }
     // }
 
-    IErlElement getErlElement(final IStructuredSelection selection,
-            final boolean silent) {
+    IErlElement getErlElement(final IStructuredSelection selection, final boolean silent) {
         if (selection.size() == 1) {
             final Object firstElement = selection.getFirstElement();
             if (firstElement instanceof IErlElement) {
@@ -206,54 +202,37 @@ public abstract class FindAction extends SelectionDispatchAction {
      */
     @Override
     public void run(final ITextSelection selection) {
-        performNewSearch(selection, getScope());
-    }
-
-    protected void performNewSearch(final ITextSelection selection,
-            final Collection<IResource> scope) {
-        performNewSearch(selection, getScope(), getExternalScope());
-    }
-
-    protected void performNewSearch(final ITextSelection selection,
-            final Collection<IResource> scope,
-            final Collection<IErlModule> externalScope) {
-        // if (!ActionUtil.isProcessable(fEditor)) {
-        // return;
-        // }
-        final IErlModule module = fEditor.getModule();
-        if (module == null) {
-            return;
-        }
-        final Backend b = ErlangCore.getBackendManager().getIdeBackend();
-        final ISelection sel = getSelection();
-        final ITextSelection textSel = (ITextSelection) sel;
-        final int offset = textSel.getOffset();
-        final String scannerModuleName = ErlangToolkit
-                .createScannerModuleName(module);
-        OpenResult res;
         try {
-            res = ErlideOpen.open(b, scannerModuleName, offset, ErlModelUtils
-                    .getImportsAsList(module), "", ErlangCore.getModel()
-                    .getPathVars());
+            final IErlModule module = fEditor.getModule();
+            if (module == null) {
+                return;
+            }
+            final ISelection sel = getSelection();
+            final ITextSelection textSel = (ITextSelection) sel;
+            final int offset = textSel.getOffset();
+            final OpenResult res = ErlangEngine
+                    .getInstance()
+                    .getService(OpenService.class)
+                    .open(module.getScannerName(),
+                            offset,
+                            ErlangEngine.getInstance().getModelUtilService()
+                                    .getImportsAsList(module), "",
+                            ErlangEngine.getInstance().getModel().getPathVars());
             ErlLogger.debug("find " + res);
             final ErlangSearchPattern ref = SearchUtil
-                    .getSearchPatternFromOpenResultAndLimitTo(module, offset,
-                            res, getLimitTo(), true);
+                    .getSearchPatternFromOpenResultAndLimitTo(module, offset, res,
+                            getLimitTo(), true);
             if (ref != null) {
-                performNewSearch(ref, scope, externalScope);
+                SearchUtil.runQuery(ref, getScope(), getScopeDescription(), getShell());
             }
-        } catch (final BackendException e) {
-            final String title = "SearchMessages.Search_Error_search_title";
-            final String message = "SearchMessages.Search_Error_codeResolve";
-            ExceptionHandler.handle(e, getShell(), title, message);
+        } catch (final Exception e) {
+            handleException(e);
         }
     }
 
     abstract LimitTo getLimitTo();
 
-    abstract protected Collection<IResource> getScope();
-
-    abstract protected Collection<IErlModule> getExternalScope();
+    abstract protected ErlSearchScope getScope() throws ErlModelException, CoreException;
 
     abstract protected String getScopeDescription();
 
@@ -270,70 +249,42 @@ public abstract class FindAction extends SelectionDispatchAction {
      */
     @Override
     public void selectionChanged(final ITextSelection selection) {
-        setEnabled(true); // FIXME japps
+        setEnabled(true);
     }
 
     /**
      * Executes this action for the given java element.
-     * 
+     *
      * @param element
      *            The erlang element to be found.
+     * @throws CoreException
      */
     public void run(final IErlElement element) {
-        performNewSearch(element, getScope(), getExternalScope());
-    }
-
-    protected void performNewSearch(final IErlElement element,
-            final Collection<IResource> scope,
-            final Collection<IErlModule> externalScope) {
-        final ErlangSearchPattern pattern = ErlangSearchPattern
-                .getSearchPatternFromErlElementAndLimitTo(element, getLimitTo());
-        SearchUtil.runQuery(pattern, scope, externalScope,
-                getScopeDescription(), getShell());
-    }
-
-    private void performNewSearch(final ErlangSearchPattern ref,
-            final Collection<IResource> scope,
-            final Collection<IErlModule> externalScope) {
-        final ErlSearchQuery query = new ErlSearchQuery(ref, scope,
-                externalScope, getScopeDescription());
-        if (query.canRunInBackground()) {
-            /*
-             * This indirection with Object as parameter is needed to prevent
-             * the loading of the Search plug-in: the VM verifies the method
-             * call and hence loads the types used in the method signature,
-             * eventually triggering the loading of a plug-in (in this case
-             * ISearchQuery results in Search plug-in being loaded).
-             */
-            SearchUtil.runQueryInBackground(query);
-        } else {
-            final IProgressService progressService = PlatformUI.getWorkbench()
-                    .getProgressService();
-            /*
-             * This indirection with Object as parameter is needed to prevent
-             * the loading of the Search plug-in: the VM verifies the method
-             * call and hence loads the types used in the method signature,
-             * eventually triggering the loading of a plug-in (in this case it
-             * would be ISearchQuery).
-             */
-            final IStatus status = SearchUtil.runQueryInForeground(
-                    progressService, query);
-            if (status.matches(IStatus.ERROR | IStatus.INFO | IStatus.WARNING)) {
-                ErrorDialog.openError(getShell(),
-                        "SearchMessages.Search_Error_search_title",
-                        "SearchMessages.Search_Error_search_message", status);
-            }
+        try {
+            final ErlangSearchPattern pattern = new SearchPatternFactory(ErlangEngine
+                    .getInstance().getModelUtilService())
+                    .getSearchPatternFromErlElementAndLimitTo(element, getLimitTo());
+            SearchUtil.runQuery(pattern, getScope(), getScopeDescription(), getShell());
+        } catch (final CoreException e) {
+            handleException(e);
         }
+    }
+
+    protected void handleException(final Exception e) {
+        ExceptionHandler.handle(new InvocationTargetException(e), getShell(), "Search",
+                "Problems occurred while searching. "
+                        + "The affected files will be skipped.");
     }
 
     /**
      * @return the fEditor
      */
-    public ErlangEditor getEditor() {
+    public AbstractErlangEditor getEditor() {
         return fEditor;
     }
 
-    protected Collection<IResource> getProjectScope() {
+    protected Collection<IProject> getProjects() {
+
         final TextEditor editor = getEditor();
         if (editor != null) {
             final IEditorInput editorInput = editor.getEditorInput();
@@ -341,53 +292,31 @@ public abstract class FindAction extends SelectionDispatchAction {
                 final IFileEditorInput input = (IFileEditorInput) editorInput;
                 final IFile file = input.getFile();
                 final IProject project = file.getProject();
-                return SearchUtil.getProjectScope(project);
+                return Lists.newArrayList(project);
             }
         } else {
             final IWorkbenchSite site = getSite();
-            final ISelection selection = site.getSelectionProvider()
-                    .getSelection();
+            final ISelection selection = site.getSelectionProvider().getSelection();
             if (selection instanceof IStructuredSelection) {
                 final IStructuredSelection ss = (IStructuredSelection) selection;
-                final Object element = ss.getFirstElement();
-                if (element instanceof IErlElement) {
-                    final IErlElement e = (IErlElement) element;
-                    return SearchUtil.getProjectScope(e.getResource()
-                            .getProject());
-                } else if (element instanceof IResource) {
-                    final IResource r = (IResource) element;
-                    return SearchUtil.getProjectScope(r.getProject());
+                final Collection<IProject> result = Sets.newHashSet();
+                for (final Object element : ss.toList()) {
+                    if (element instanceof IErlElement) {
+                        final IErlElement e = (IErlElement) element;
+                        result.add(e.getResource().getProject());
+                    } else if (element instanceof IResource) {
+                        final IResource r = (IResource) element;
+                        result.add(r.getProject());
+                    }
                 }
+                return result;
             }
         }
         return null;
     }
 
-    protected Collection<IResource> getWorkingSetsScope(
-            final IWorkingSet[] workingSets) throws InterruptedException {
-        IWorkingSet[] ws = workingSets;
-        if (ws == null) {
-            ws = SearchUtil.queryWorkingSets();
-        }
-        if (ws != null) {
-            SearchUtil.updateLRUWorkingSets(ws);
-            return SearchUtil.getWorkingSetsScope(ws);
-        } else {
-            return SearchUtil.getWorkspaceScope();
-        }
+    protected ErlSearchScope getProjectScope() throws CoreException {
+        return SearchCoreUtil.getProjectsScope(getProjects(), false, false);
     }
 
-    protected Collection<IErlModule> getWorkingSetsExternalScope(
-            final IWorkingSet[] workingSets) throws InterruptedException {
-        IWorkingSet[] ws = workingSets;
-        if (ws == null) {
-            ws = SearchUtil.queryWorkingSets();
-        }
-        if (ws != null) {
-            SearchUtil.updateLRUWorkingSets(ws);
-            return SearchUtil.getWorkingSetsExternalScope(ws);
-        } else {
-            return SearchUtil.getWorkspaceExternalScope();
-        }
-    }
 }

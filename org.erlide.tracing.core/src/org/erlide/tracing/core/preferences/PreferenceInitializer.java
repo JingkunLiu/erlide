@@ -6,9 +6,9 @@ import org.erlide.tracing.core.Activator;
 
 /**
  * Preferences initializer.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class PreferenceInitializer extends AbstractPreferenceInitializer {
 
@@ -17,7 +17,7 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 
     @Override
     public void initializeDefaultPreferences() {
-        IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+        final IPreferenceStore store = Activator.getDefault().getPreferenceStore();
         store.setDefault(PreferenceNames.NODE_NAME, "tracing");
         store.setDefault(PreferenceNames.TICK_TIME, 60);
         store.setDefault(PreferenceNames.TRACES_LOAD_LIMIT, 100);

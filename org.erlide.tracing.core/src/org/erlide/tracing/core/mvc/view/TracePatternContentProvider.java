@@ -6,9 +6,9 @@ import org.erlide.tracing.core.TraceBackend;
 
 /**
  * Content provider for trace patterns table.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class TracePatternContentProvider implements IStructuredContentProvider {
 
@@ -17,14 +17,18 @@ public class TracePatternContentProvider implements IStructuredContentProvider {
     public TracePatternContentProvider() {
     }
 
-    public Object[] getElements(Object inputElement) {
+    @Override
+    public Object[] getElements(final Object inputElement) {
         return backend.getTracePatternsArray();
     }
 
+    @Override
     public void dispose() {
     }
 
-    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+    @Override
+    public void inputChanged(final Viewer viewer, final Object oldInput,
+            final Object newInput) {
         backend = (TraceBackend) newInput;
     }
 }

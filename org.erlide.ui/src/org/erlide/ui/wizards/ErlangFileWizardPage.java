@@ -10,9 +10,13 @@
 
 package org.erlide.ui.wizards;
 
+import java.util.Collection;
+
 import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.IDialogPage;
 import org.eclipse.jface.text.BadLocationException;
@@ -39,15 +43,18 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ContainerSelectionDialog;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IOldErlangProjectProperties;
-import org.erlide.core.erlang.util.ErlideUtil;
-import org.erlide.jinterface.util.ErlLogger;
-import org.erlide.ui.ErlideUIPlugin;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.erlang.SourceKind;
+import org.erlide.engine.model.root.IErlProject;
+import org.erlide.ui.internal.ErlideUIPlugin;
 import org.erlide.ui.templates.ErlangSourceContextTypeModule;
 import org.erlide.ui.templates.ModuleVariableResolver;
 import org.erlide.ui.wizards.templates.ExportedFunctionsVariableResolver;
 import org.erlide.ui.wizards.templates.LocalFunctionsVariableResolver;
+import org.erlide.util.ErlLogger;
+import org.erlide.util.SystemConfiguration;
+
+import com.ericsson.otp.erlang.OtpErlangAtom;
 
 /**
  * The "New" wizard page allows setting the container for the new file as well
@@ -57,289 +64,313 @@ import org.erlide.ui.wizards.templates.LocalFunctionsVariableResolver;
 
 public class ErlangFileWizardPage extends WizardPage {
 
-	public boolean gettingInput = false;
-	private Text containerText;
-	private Text fileText;
-	private Combo applications;
-	private Combo skeleton;
-	private FunctionGroup functionGroup;
-	private final ISelection fSelection;
-	private final Template[] moduleTemplates;
-	private final ModifyListener fModifyListener;
-	private TemplateContextType fContextType = null;
+    public boolean gettingInput = false;
+    private Text containerText;
+    private Text fileText;
+    private Combo applications;
+    private Combo skeleton;
+    private FunctionGroup functionGroup;
+    private final ISelection fSelection;
+    private final Template[] moduleTemplates;
+    private final ModifyListener fModifyListener;
+    private TemplateContextType fContextType = null;
 
-	/**
-	 * Constructor for SampleNewWizardPage.
-	 * 
-	 * @param pageName
-	 */
-	public ErlangFileWizardPage(final ISelection selection) {
-		super("wizardPage");
-		setTitle("Erlang Source File");
-		setDescription("This wizard creates a new erlang source file.");
-		fSelection = selection;
+    /**
+     * Constructor for SampleNewWizardPage.
+     *
+     * @param pageName
+     */
+    public ErlangFileWizardPage(final ISelection selection) {
+        super("wizardPage");
+        setTitle("Erlang Source File");
+        setDescription("This wizard creates a new erlang source file.");
+        fSelection = selection;
 
-		moduleTemplates = ErlideUIPlugin
-				.getDefault()
-				.getTemplateStore()
-				.getTemplates(
-						ErlangSourceContextTypeModule.ERLANG_SOURCE_CONTEXT_TYPE_MODULE_ID);
-		fModifyListener = new ModifyListener() {
-			public void modifyText(final ModifyEvent e) {
-				dialogChanged();
-			}
-		};
-	}
+        moduleTemplates = ErlideUIPlugin
+                .getDefault()
+                .getTemplateStore()
+                .getTemplates(
+                        ErlangSourceContextTypeModule.ERLANG_SOURCE_CONTEXT_TYPE_MODULE_ID);
+        fModifyListener = new ModifyListener() {
+            @Override
+            public void modifyText(final ModifyEvent e) {
+                dialogChanged();
+            }
+        };
+    }
 
-	/**
-	 * @see IDialogPage#createControl(Composite)
-	 */
-	public void createControl(final Composite parent) {
+    /**
+     * @see IDialogPage#createControl(Composite)
+     */
+    @Override
+    public void createControl(final Composite parent) {
 
-		final Composite container = new Composite(parent, SWT.NULL);
+        final Composite container = new Composite(parent, SWT.NULL);
 
-		final GridLayout grid = new GridLayout(1, true);
-		container.setLayout(grid);
+        final GridLayout grid = new GridLayout(1, true);
+        container.setLayout(grid);
 
-		final Composite filePanel = new Composite(container, SWT.NULL);
-		GridData gd = new GridData(SWT.FILL, SWT.CENTER, true, false);
-		filePanel.setLayoutData(gd);
-		final GridLayout layout = new GridLayout();
-		filePanel.setLayout(layout);
-		layout.numColumns = 3;
-		layout.verticalSpacing = 9;
+        final Composite filePanel = new Composite(container, SWT.NULL);
+        GridData gd = new GridData(SWT.FILL, SWT.CENTER, true, false);
+        filePanel.setLayoutData(gd);
+        final GridLayout layout = new GridLayout();
+        filePanel.setLayout(layout);
+        layout.numColumns = 3;
+        layout.verticalSpacing = 9;
 
-		Label label = new Label(filePanel, SWT.NULL);
-		label.setText("&Module name:");
+        Label label = new Label(filePanel, SWT.NULL);
+        label.setText("&Module name:");
 
-		fileText = new Text(filePanel, SWT.BORDER | SWT.SINGLE);
-		gd = new GridData(SWT.FILL, SWT.CENTER, true, true);
-		fileText.setLayoutData(gd);
-		fileText.addModifyListener(fModifyListener);
+        fileText = new Text(filePanel, SWT.BORDER | SWT.SINGLE);
+        gd = new GridData(SWT.FILL, SWT.CENTER, true, true);
+        fileText.setLayoutData(gd);
+        fileText.addModifyListener(fModifyListener);
 
-		label = new Label(filePanel, SWT.NULL);
+        label = new Label(filePanel, SWT.NULL);
 
-		label = new Label(filePanel, SWT.NULL);
-		label.setText("&Container:");
+        label = new Label(filePanel, SWT.NULL);
+        label.setText("&Container:");
 
-		containerText = new Text(filePanel, SWT.BORDER | SWT.SINGLE);
-		gd = new GridData(SWT.FILL, SWT.CENTER, true, true);
-		containerText.setLayoutData(gd);
-		containerText.addModifyListener(fModifyListener);
+        containerText = new Text(filePanel, SWT.BORDER | SWT.SINGLE);
+        gd = new GridData(SWT.FILL, SWT.CENTER, true, true);
+        containerText.setLayoutData(gd);
+        containerText.addModifyListener(fModifyListener);
 
-		final Button button = new Button(filePanel, SWT.PUSH);
-		button.setText("Browse...");
-		button.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(final SelectionEvent e) {
-				handleBrowse();
-			}
-		});
+        final Button button = new Button(filePanel, SWT.PUSH);
+        button.setText("Browse...");
+        button.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                handleBrowse();
+            }
+        });
 
-		label = new Label(filePanel, SWT.NULL);
-		label.setText("&Application name:");
+        label = new Label(filePanel, SWT.NULL);
+        label.setText("&Application name:");
 
-		applications = new Combo(filePanel, SWT.BORDER | SWT.DROP_DOWN
-				| SWT.READ_ONLY);
-		applications.add("None");
-		gd = new GridData(SWT.FILL, SWT.CENTER, true, true);
-		applications.setLayoutData(gd);
-		applications.select(0);
-		applications.addModifyListener(fModifyListener);
+        applications = new Combo(filePanel, SWT.BORDER | SWT.DROP_DOWN | SWT.READ_ONLY);
+        applications.add("None");
+        gd = new GridData(SWT.FILL, SWT.CENTER, true, true);
+        applications.setLayoutData(gd);
+        applications.select(0);
+        applications.addModifyListener(fModifyListener);
 
-		new Label(filePanel, SWT.NULL);
+        new Label(filePanel, SWT.NULL);
 
-		label = new Label(filePanel, SWT.NULL);
-		gd = new GridData(SWT.CENTER, SWT.CENTER, false, false);
-		label.setLayoutData(gd);
-		label.setText("&Skeleton");
+        label = new Label(filePanel, SWT.NULL);
+        gd = new GridData(SWT.CENTER, SWT.CENTER, false, false);
+        label.setLayoutData(gd);
+        label.setText("&Skeleton");
 
-		skeleton = new Combo(filePanel, SWT.BORDER | SWT.DROP_DOWN
-				| SWT.READ_ONLY);
-		// skeleton.add("None");
+        skeleton = new Combo(filePanel, SWT.BORDER | SWT.DROP_DOWN | SWT.READ_ONLY);
+        // skeleton.add("None");
+        int i = 0, defaultSkeleton = 0;
+        for (final Template element : moduleTemplates) {
+            final String name = element.getName();
+            skeleton.add(name);
+            if ("module".equals(name)) {
+                defaultSkeleton = i;
+            }
+            ++i;
+        }
+        skeleton.select(defaultSkeleton);
 
-		for (final Template element : moduleTemplates) {
-			skeleton.add(element.getName());
-		}
-		skeleton.select(0);
+        functionGroup = new FunctionGroup(container, this);
 
-		functionGroup = new FunctionGroup(container, this);
+        initialize();
+        dialogChanged();
+        setControl(container);
+    }
 
-		initialize();
-		dialogChanged();
-		setControl(container);
-	}
+    /**
+     * Tests if the current workbench selection is a suitable container to use.
+     */
 
-	/**
-	 * Tests if the current workbench selection is a suitable container to use.
-	 */
+    private void initialize() {
+        if (fSelection instanceof IStructuredSelection && !fSelection.isEmpty()) {
+            final IStructuredSelection ssel = (IStructuredSelection) fSelection;
+            if (ssel.size() > 1) {
+                return;
+            }
+            final Object obj = ssel.getFirstElement();
+            if (obj instanceof IResource) {
+                final IResource resource = (IResource) obj;
+                IContainer container;
+                if (resource instanceof IContainer) {
+                    container = (IContainer) resource;
+                } else {
+                    container = resource.getParent();
+                }
+                final IProject project = resource.getProject();
+                final IErlProject erlProject = ErlangEngine.getInstance().getModel()
+                        .getErlangProject(project);
+                String txt = container.getFullPath().toString();
+                final Collection<IPath> sourceDirs = erlProject.getProperties()
+                        .getSourceDirs();
+                if (!sourceDirs.isEmpty()) {
+                    final IPath sourceDirWithinContainer = sourceDirWithinContainer(
+                            sourceDirs, container);
+                    if (sourceDirWithinContainer != null) {
+                        txt = sourceDirWithinContainer.toString();
+                    }
+                }
+                containerText.setText(txt);
 
-	private void initialize() {
-		if (fSelection != null && !fSelection.isEmpty()
-				&& fSelection instanceof IStructuredSelection) {
-			final IStructuredSelection ssel = (IStructuredSelection) fSelection;
-			if (ssel.size() > 1) {
-				return;
-			}
-			final Object obj = ssel.getFirstElement();
-			if (obj instanceof IResource) {
-				IContainer container;
-				if (obj instanceof IContainer) {
-					container = (IContainer) obj;
-				} else {
-					container = ((IResource) obj).getParent();
-				}
-				final IOldErlangProjectProperties pp = ErlangCore
-						.getProjectProperties(((IResource) obj).getProject());
-				String txt;
-				if (pp.hasSourceDir(container.getFullPath())) {
-					txt = container.getFullPath().toString();
-				} else if (pp.getSourceDirs().size() > 0) {
-					txt = container.getFolder(
-							new Path(pp.getSourceDirs().iterator().next().toString()))
-							.getFullPath().toString();
-				} else {
-					txt = container.getFullPath().toString();
-				}
-				containerText.setText(txt);
+            }
+        }
+    }
 
-			}
-		}
+    private IPath sourceDirWithinContainer(final Collection<IPath> sourceDirs,
+            final IContainer container) {
+        final IPath containerPath = container.getProjectRelativePath();
+        for (final IPath sourceDir : sourceDirs) {
+            if (containerPath.equals(sourceDir)) {
+                return container.getFullPath();
+            } else if (containerPath.isPrefixOf(sourceDir)) {
+                final IResource member = container.findMember(sourceDir);
+                if (member != null) {
+                    return member.getFullPath();
+                }
+                ErlLogger.warn("Could not find %s in %s", sourceDir, container);
+            }
+        }
+        return null;
+    }
 
-		fileText.setText("new_file");
-	}
+    /**
+     * Uses the standard container selection dialog to choose the new value for
+     * the container field.
+     */
+    void handleBrowse() {
+        final ContainerSelectionDialog dialog = new ContainerSelectionDialog(getShell(),
+                ResourcesPlugin.getWorkspace().getRoot(), false,
+                "Select new file container");
+        if (dialog.open() == Window.OK) {
+            final Object[] result = dialog.getResult();
+            if (result.length == 1) {
+                containerText.setText(((Path) result[0]).toString());
+            }
+        }
+    }
 
-	/**
-	 * Uses the standard container selection dialog to choose the new value for
-	 * the container field.
-	 */
-	void handleBrowse() {
-		final ContainerSelectionDialog dialog = new ContainerSelectionDialog(
-				getShell(), ResourcesPlugin.getWorkspace().getRoot(), false,
-				"Select new file container");
-		if (dialog.open() == Window.OK) {
-			final Object[] result = dialog.getResult();
-			if (result.length == 1) {
-				containerText.setText(((Path) result[0]).toString());
-			}
-		}
-	}
+    /**
+     * Ensures that both text fields are set.
+     */
+    void dialogChanged() {
+        final IResource container = ResourcesPlugin.getWorkspace().getRoot()
+                .findMember(new Path(getContainerName()));
+        final String fileName = getFileName();
 
-	/**
-	 * Ensures that both text fields are set.
-	 */
-	void dialogChanged() {
-		final IResource container = ResourcesPlugin.getWorkspace().getRoot()
-				.findMember(new Path(getContainerName()));
-		final String fileName = getFileName();
+        if (getContainerName().length() == 0) {
+            updateStatus("File container must be specified");
+            return;
+        }
+        if (container == null
+                || (container.getType() & (IResource.PROJECT | IResource.FOLDER)) == 0) {
+            updateStatus("File container must exist");
+            return;
+        }
+        if (!container.isAccessible()) {
+            updateStatus("Project must be writable");
+            return;
+        }
+        if (fileName.length() == 0) {
+            updateStatus("File name must be specified");
+            return;
+        }
+        if (fileName.replace('\\', '/').indexOf('/', 1) > 0) {
+            updateStatus("File name must be valid");
+            return;
+        }
+        final int dotLoc = fileName.lastIndexOf('.');
+        if (dotLoc != -1) {
+            final String ext = fileName.substring(dotLoc + 1);
+            if (!ext.equalsIgnoreCase("erl")) {
+                updateStatus("File extension must be \"erl\"");
+                return;
+            }
+        }
+        updateStatus(null);
+    }
 
-		if (getContainerName().length() == 0) {
-			updateStatus("File container must be specified");
-			return;
-		}
-		if (container == null
-				|| (container.getType() & (IResource.PROJECT | IResource.FOLDER)) == 0) {
-			updateStatus("File container must exist");
-			return;
-		}
-		if (!container.isAccessible()) {
-			updateStatus("Project must be writable");
-			return;
-		}
-		if (fileName.length() == 0) {
-			updateStatus("File name must be specified");
-			return;
-		}
-		if (fileName.replace('\\', '/').indexOf('/', 1) > 0) {
-			updateStatus("File name must be valid");
-			return;
-		}
-		final int dotLoc = fileName.lastIndexOf('.');
-		if (dotLoc != -1) {
-			final String ext = fileName.substring(dotLoc + 1);
-			if (!ext.equalsIgnoreCase("erl")) {
-				updateStatus("File extension must be \"erl\"");
-				return;
-			}
-		}
-		updateStatus(null);
-	}
+    private void updateStatus(final String message) {
+        setErrorMessage(message);
+        setPageComplete(message == null);
+    }
 
-	private void updateStatus(final String message) {
-		setErrorMessage(message);
-		setPageComplete(message == null);
-	}
+    public String getContainerName() {
+        return containerText.getText();
+    }
 
-	public String getContainerName() {
-		return containerText.getText();
-	}
+    public String getFileName() {
+        return fileText.getText();
+    }
 
-	public String getFileName() {
-		return fileText.getText();
-	}
+    /**
+     * Get the skeleton that is to be generated.
+     *
+     * @return The skeleton that the new file is to consist of.
+     */
+    public String getSkeleton() {
+        final int index = skeleton.getSelectionIndex();
+        if (index < 0 || index >= moduleTemplates.length) {
+            return "";
+        }
+        return parse(moduleTemplates[index], getContextType());
+    }
 
-	/**
-	 * Get the skeleton that is to be generated.
-	 * 
-	 * @return The skeleton that the new file is to consist of.
-	 */
-	public String getSkeleton() {
-		final int index = skeleton.getSelectionIndex();
-		if (index < 0 || index >= moduleTemplates.length) {
-			return "";
-		}
-		return parse(moduleTemplates[index], getContextType());
-	}
+    private TemplateContextType getContextType() {
+        if (fContextType == null) {
+            fContextType = ErlideUIPlugin
+                    .getDefault()
+                    .getContextTypeRegistry()
+                    .getContextType(
+                            ErlangSourceContextTypeModule.ERLANG_SOURCE_CONTEXT_TYPE_MODULE_ID);
+        }
+        return fContextType;
+    }
 
-	private TemplateContextType getContextType() {
-		if (fContextType == null) {
-			fContextType = ErlideUIPlugin
-					.getDefault()
-					.getContextTypeRegistry()
-					.getContextType(
-							ErlangSourceContextTypeModule.ERLANG_SOURCE_CONTEXT_TYPE_MODULE_ID);
-		}
-		return fContextType;
-	}
+    private String moduleName(final String fileName) {
+        return new OtpErlangAtom(fileName).toString();
+    }
 
-	private String parse(final Template template,
-			final TemplateContextType contextType) {
-		String s = getFileName();
-		if (ErlideUtil.hasModuleExtension(s)) {
-			s = ErlideUtil.withoutExtension(s);
-		}
-		ModuleVariableResolver.getDefault().setModule(s);
+    private String parse(final Template template, final TemplateContextType contextType) {
+        String s = getFileName();
+        if (SourceKind.hasModuleExtension(s)) {
+            s = SystemConfiguration.withoutExtension(s);
+        }
+        ModuleVariableResolver.getDefault().setModule(moduleName(s));
 
-		ExportedFunctionsVariableResolver.getDefault().clearFunctions();
-		LocalFunctionsVariableResolver.getDefault().clearFunctions();
+        ExportedFunctionsVariableResolver.getDefault().clearFunctions();
+        LocalFunctionsVariableResolver.getDefault().clearFunctions();
 
-		for (int i = 0; i < functionGroup.getFunctionData().length; i++) {
-			final Function fun = functionGroup.getFunctionData()[i];
-			if (fun.isExported) {
-				ExportedFunctionsVariableResolver.getDefault().addFunction(
-						fun.name, fun.arity);
-			} else {
-				LocalFunctionsVariableResolver.getDefault().addFunction(
-						fun.name, fun.arity);
-			}
-		}
+        for (int i = 0; i < functionGroup.getFunctionData().length; i++) {
+            final Function fun = functionGroup.getFunctionData()[i];
+            if (fun.isExported) {
+                ExportedFunctionsVariableResolver.getDefault().addFunction(fun.name,
+                        fun.arity);
+            } else {
+                LocalFunctionsVariableResolver.getDefault().addFunction(fun.name,
+                        fun.arity);
+            }
+        }
 
-		TemplateBuffer tb = null;
+        TemplateBuffer tb = null;
 
-		try {
-			final DocumentTemplateContext context = new DocumentTemplateContext(
-					contextType, new Document(template.getPattern()), 0,
-					template.getPattern().length());
-			tb = context.evaluate(template);
-		} catch (final BadLocationException e) {
-			ErlLogger.warn(e);
-		} catch (final TemplateException e) {
-			ErlLogger.warn(e);
-		}
+        try {
+            final DocumentTemplateContext context = new DocumentTemplateContext(
+                    contextType, new Document(template.getPattern()), 0, template
+                            .getPattern().length());
+            tb = context.evaluate(template);
+        } catch (final BadLocationException e) {
+            ErlLogger.warn(e);
+        } catch (final TemplateException e) {
+            ErlLogger.warn(e);
+        }
 
-		if (tb == null) {
-			return null;
-		}
-		return tb.getString();
-	}
+        if (tb == null) {
+            return null;
+        }
+        return tb.getString();
+    }
 }

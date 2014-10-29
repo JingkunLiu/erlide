@@ -21,7 +21,7 @@ import org.eclipse.swt.widgets.TreeItem;
 
 /**
  * QuickOutlineMouseMoveListener
- * 
+ *
  */
 public class QuickOutlineMouseMoveListener implements MouseMoveListener {
 
@@ -30,20 +30,14 @@ public class QuickOutlineMouseMoveListener implements MouseMoveListener {
     private final TreeViewer fTreeViewer;
 
     /**
-	 *
-	 */
+     *
+     */
     public QuickOutlineMouseMoveListener(final TreeViewer treeViewer) {
         fLastItem = null;
         fTreeViewer = treeViewer;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.swt.events.MouseMoveListener#mouseMove(org.eclipse.swt.events
-     * .MouseEvent)
-     */
+    @Override
     public void mouseMove(final MouseEvent e) {
         final Tree tree = fTreeViewer.getTree();
         if (tree.equals(e.getSource())) {

@@ -25,10 +25,9 @@ import org.eclipse.compare.IEditableContent;
 import org.eclipse.compare.IEditableContentExtension;
 import org.eclipse.compare.ISharedDocumentAdapter;
 import org.eclipse.compare.IStreamContentAccessor;
+import org.eclipse.compare.ITypedElement;
 import org.eclipse.compare.ResourceNode;
-import org.eclipse.compare.structuremergeviewer.Differencer;
 import org.eclipse.compare.structuremergeviewer.DocumentRangeNode;
-import org.eclipse.compare.structuremergeviewer.IDiffContainer;
 import org.eclipse.compare.structuremergeviewer.IStructureComparator;
 import org.eclipse.compare.structuremergeviewer.IStructureCreator;
 import org.eclipse.compare.structuremergeviewer.StructureCreator;
@@ -40,16 +39,20 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IDocumentPartitioner;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.services.IDisposable;
-import org.erlide.core.erlang.ErlModelException;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.core.erlang.IOpenable;
-import org.erlide.core.erlang.IParent;
-import org.erlide.jinterface.util.ErlLogger;
-import org.erlide.ui.ErlideUIPlugin;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.IErlModel;
+import org.erlide.engine.model.IOpenable;
+import org.erlide.engine.model.IParent;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.ui.editors.erl.ErlangDocumentSetupParticipant;
+import org.erlide.ui.editors.erl.scanner.IErlangPartitions;
+import org.erlide.ui.internal.ErlideUIPlugin;
+import org.erlide.util.ErlLogger;
 
 public class ErlStructureCreator extends StructureCreator {
 
@@ -57,62 +60,37 @@ public class ErlStructureCreator extends StructureCreator {
 
     // private final IErlProject fProject;
 
-    private final String fName;
+    private IDocumentPartitioner documentPartitioner = null;
 
     public ErlStructureCreator() {
-        // this(ErlangCore.getModelManager().createEmptyProject(),
-        // "comptemp.erl");
-        this("comptemp.erl");
-    }
-
-    /**
-     * @param name
-     */
-    public ErlStructureCreator(final String name) {
-        super();
-        // fProject = project;
-        fName = name;
     }
 
     /**
      * @see IStructureCreator#getTitle
      */
+    @Override
     public String getName() {
         return ErlideUIPlugin.getResourceString(NAME);
     }
 
     /**
      * A root node for the structure. It is similar to {@link StructureRootNode}
-     * but needed to be a subclass of {@link JavaNode} because of the code used
+     * but needed to be a subclass of {@link ErlNode} because of the code used
      * to build the structure.
      */
     private final class RootErlNode extends ErlNode implements IDisposable {
         private Object fInput;
 
-        private RootErlNode(final IDocument document, final Object input) {
+        RootErlNode(final IDocument document, final Object input) {
             super(document);
             fInput = input;
         }
 
-        /*
-         * (non-Javadoc)
-         * 
-         * @see
-         * org.eclipse.compare.structuremergeviewer.DocumentRangeNode#nodeChanged
-         * (org.eclipse.compare.structuremergeviewer.DocumentRangeNode)
-         */
         @Override
         protected void nodeChanged(final DocumentRangeNode node) {
             save(this, fInput);
         }
 
-        /*
-         * (non-Javadoc)
-         * 
-         * @see
-         * org.eclipse.compare.structuremergeviewer.DocumentRangeNode#isReadOnly
-         * ()
-         */
         @Override
         public boolean isReadOnly() {
             if (fInput instanceof IEditableContentExtension) {
@@ -122,13 +100,6 @@ public class ErlStructureCreator extends StructureCreator {
             return super.isReadOnly();
         }
 
-        /*
-         * (non-Javadoc)
-         * 
-         * @see
-         * org.eclipse.compare.structuremergeviewer.DocumentRangeNode#validateEdit
-         * (org.eclipse.swt.widgets.Shell)
-         */
         @Override
         public IStatus validateEdit(final Shell shell) {
             if (fInput instanceof IEditableContentExtension) {
@@ -138,6 +109,7 @@ public class ErlStructureCreator extends StructureCreator {
             return super.validateEdit(shell);
         }
 
+        @Override
         public void dispose() {
             fInput = null;
         }
@@ -198,27 +170,6 @@ public class ErlStructureCreator extends StructureCreator {
     }
 
     /**
-     * @see IStructureCreator#canSave
-     */
-    public boolean canSave() {
-        return true;
-    }
-
-    /**
-     * @see IStructureCreator#canRewriteTree
-     */
-    public boolean canRewriteTree() {
-        return false;
-    }
-
-    /**
-     * @see IStructureCreator#rewriteTree
-     */
-    public void rewriteTree(final Differencer differencer,
-            final IDiffContainer root) {
-    }
-
-    /**
      * @see IStructureCreator#save
      */
     @Override
@@ -234,6 +185,7 @@ public class ErlStructureCreator extends StructureCreator {
     /**
      * @see IStructureCreator#getContents
      */
+    @Override
     public String getContents(final Object node, final boolean ignoreWhitespace) {
         if (node instanceof IStreamContentAccessor) {
             final IStreamContentAccessor sca = (IStreamContentAccessor) node;
@@ -278,18 +230,20 @@ public class ErlStructureCreator extends StructureCreator {
     }
 
     @Override
-    protected IStructureComparator createStructureComparator(
-            final Object element, IDocument document,
+    protected IStructureComparator createStructureComparator(final Object element,
+            final IDocument document0,
             final ISharedDocumentAdapter sharedDocumentAdapter,
             final IProgressMonitor monitor) throws CoreException {
         IErlModule module = null;
+        final IErlModel model = ErlangEngine.getInstance().getModel();
         String s = "";
+        IDocument document = document0;
         if (element instanceof ResourceNode) {
             final ResourceNode rn = (ResourceNode) element;
             final IResource r = rn.getResource();
             if (r instanceof IFile) {
                 final IFile f = (IFile) r;
-                final IErlElement e = ErlangCore.getModel().findElement(r);
+                final IErlElement e = model.findElement(r);
                 if (e instanceof IErlModule) {
                     module = (IErlModule) e;
                 }
@@ -301,29 +255,42 @@ public class ErlStructureCreator extends StructureCreator {
                     }
                 }
             }
-        } else if (document == null
-                && element instanceof IStreamContentAccessor) {
+        } else if (document == null && element instanceof IStreamContentAccessor) {
             try {
                 final InputStream contents = ((IStreamContentAccessor) element)
                         .getContents();
-                s = readString(contents);
+                try {
+                    s = readString(contents);
+                } finally {
+                    try {
+                        contents.close();
+                    } catch (final IOException e) {
+                    }
+                }
                 document = new Document(s);
             } catch (final CoreException ex) {
             }
+        } else if (document != null) {
+            s = document.get();
         }
         if (module == null) {
-            module = ErlangCore.getModelManager().getModuleFromText(null,
-                    fName, s, s);
+            String name = "comptemp";
+            if (element instanceof ITypedElement) {
+                final ITypedElement typedElement = (ITypedElement) element;
+                name = typedElement.getName();
+            }
+            module = model.getModuleFromText(model, name, s, s);
         }
         ErlNode root = null;
-        try {
-            module.open(null);
-            root = new RootErlNode(document, element);
-            recursiveMakeErlNodes(module, root, document);
-        } catch (final ErlModelException e) {
-            ErlLogger.warn(e);
+        if (element != null && document != null) {
+            try {
+                module.open(null);
+                root = new RootErlNode(document, element);
+                recursiveMakeErlNodes(module, root, document);
+            } catch (final ErlModelException e) {
+                ErlLogger.warn(e);
+            }
         }
-
         return root;
     }
 
@@ -336,7 +303,7 @@ public class ErlStructureCreator extends StructureCreator {
             final List<String> args = new ArrayList<String>();
             while (e != null) {
                 // each path component has a name that uses the same
-                // conventions as a JavaNode name
+                // conventions as a ErlNode name
                 final String name = ErlangCompareUtilities.getErlElementID(e);
                 if (name == null) {
                     return null;
@@ -345,11 +312,25 @@ public class ErlStructureCreator extends StructureCreator {
                 if (e instanceof IErlModule) {
                     break;
                 }
-                e = e.getParent();
+                e = (IErlElement) e.getParent();
             }
             Collections.reverse(args);
             return args.toArray(new String[args.size()]);
         }
         return null;
+    }
+
+    @Override
+    protected String getDocumentPartitioning() {
+        return IErlangPartitions.ERLANG_PARTITIONING;
+    }
+
+    @Override
+    protected IDocumentPartitioner getDocumentPartitioner() {
+        if (documentPartitioner == null) {
+            documentPartitioner = ErlangDocumentSetupParticipant
+                    .createDocumentPartitioner();
+        }
+        return documentPartitioner;
     }
 }

@@ -11,13 +11,17 @@ import org.eclipse.jface.viewers.Viewer;
  */
 public class ProcessContentProvider implements IStructuredContentProvider {
 
+    @Override
     public void dispose() {
     }
 
-    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+    @Override
+    public void inputChanged(final Viewer viewer, final Object oldInput,
+            final Object newInput) {
     }
 
-    public Object[] getElements(Object inputElement) {
+    @Override
+    public Object[] getElements(final Object inputElement) {
         return (Object[]) inputElement;
     }
 }

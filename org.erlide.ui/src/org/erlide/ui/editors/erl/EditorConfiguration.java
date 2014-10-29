@@ -21,94 +21,47 @@ import org.eclipse.jface.text.IAutoEditStrategy;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IInformationControl;
 import org.eclipse.jface.text.IInformationControlCreator;
-import org.eclipse.jface.text.ITextDoubleClickStrategy;
 import org.eclipse.jface.text.ITextHover;
-import org.eclipse.jface.text.contentassist.ContentAssistant;
-import org.eclipse.jface.text.contentassist.IContentAssistant;
-import org.eclipse.jface.text.quickassist.IQuickAssistAssistant;
-import org.eclipse.jface.text.quickassist.QuickAssistAssistant;
 import org.eclipse.jface.text.reconciler.IReconciler;
-import org.eclipse.jface.text.source.ICharacterPairMatcher;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.editors.text.EditorsUI;
-import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 import org.eclipse.ui.texteditor.ITextEditor;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.root.IErlProject;
 import org.erlide.ui.editors.erl.autoedit.AutoIndentStrategy;
-import org.erlide.ui.editors.erl.completion.ErlContentAssistProcessor;
-import org.erlide.ui.editors.erl.correction.ErlangQuickAssistProcessor;
 import org.erlide.ui.editors.erl.hover.ErlTextHover;
 import org.erlide.ui.editors.internal.reconciling.ErlReconciler;
-import org.erlide.ui.editors.internal.reconciling.ErlReconcilerStrategy;
-import org.erlide.ui.information.ErlInformationPresenter;
-import org.erlide.ui.information.PresenterControlCreator;
+import org.erlide.ui.editors.internal.reconciling.ErlReconcilingStrategy;
+import org.erlide.ui.internal.information.ErlInformationPresenter;
+import org.erlide.ui.internal.information.PresenterControlCreator;
 import org.erlide.ui.util.IColorManager;
 import org.erlide.ui.util.eclipse.text.BrowserInformationControl;
 
 /**
  * The editor configurator
- * 
+ *
  * @author Eric Merritt [cyberlync at gmail dot com]
  */
 public class EditorConfiguration extends ErlangSourceViewerConfiguration {
 
-    final ErlangEditor editor;
-    private ITextDoubleClickStrategy doubleClickStrategy;
-    private ICharacterPairMatcher fBracketMatcher;
+    final AbstractErlangEditor editor;
     private ErlReconciler reconciler;
 
-    /**
-     * Default configuration constructor
-     * 
-     * @param store
-     * 
-     * @param editor
-     * 
-     * @param lcolorManager
-     *            the color manager
-     */
     public EditorConfiguration(final IPreferenceStore store,
-            final ErlangEditor leditor, final IColorManager colorManager) {
+            final AbstractErlangEditor editor, final IColorManager colorManager) {
         super(store, colorManager);
-        editor = leditor;
+        this.editor = editor;
     }
 
-    /**
-     * The double click strategy
-     * 
-     * @see org.eclipse.jface.text.source.SourceViewerConfiguration#getDoubleClickStrategy(org.eclipse.jface.text.source.ISourceViewer,
-     *      java.lang.String)
-     */
     @Override
-    public ITextDoubleClickStrategy getDoubleClickStrategy(
-            final ISourceViewer sourceViewer, final String contentType) {
-        if (doubleClickStrategy == null) {
-            // doubleClickStrategy = new
-            // ErlDoubleClickSelector(getBracketMatcher());
-            doubleClickStrategy = new DoubleClickStrategy(getBracketMatcher());
+    public IAutoEditStrategy[] getAutoEditStrategies(final ISourceViewer sourceViewer,
+            final String contentType) {
+        if (contentType.equals(IDocument.DEFAULT_CONTENT_TYPE)) {
+            return new IAutoEditStrategy[] { new AutoIndentStrategy(editor) };
         }
-        return doubleClickStrategy;
-    }
-
-    public ICharacterPairMatcher getBracketMatcher() {
-        if (fBracketMatcher == null) {
-            fBracketMatcher = new ErlangPairMatcher(new String[] { "(", ")",
-                    "{", "}", "[", "]", "<<", ">>" });
-        }
-        return fBracketMatcher;
-    }
-
-    /*
-     * @see
-     * org.eclipse.jface.text.source.SourceViewerConfiguration#getAutoEditStrategies
-     * (org.eclipse.jface.text.source.ISourceViewer, java.lang.String)
-     */
-    @Override
-    public IAutoEditStrategy[] getAutoEditStrategies(
-            final ISourceViewer sourceViewer, final String contentType) {
-        // final String partitioning =
-        // getConfiguredDocumentPartitioning(sourceViewer);
-        return new IAutoEditStrategy[] { new AutoIndentStrategy(editor) };
+        return NO_AUTOEDIT;
     }
 
     @Override
@@ -117,62 +70,42 @@ public class EditorConfiguration extends ErlangSourceViewerConfiguration {
         return new ErlTextHover(editor);
     }
 
-    /**
-     * Returns the editor in which the configured viewer(s) will reside.
-     * 
-     * @return the enclosing editor
-     */
     protected ITextEditor getEditor() {
         return editor;
     }
 
     @Override
     public IReconciler getReconciler(final ISourceViewer sourceViewer) {
-        final ErlReconcilerStrategy strategy = new ErlReconcilerStrategy(editor);
-        reconciler = new ErlReconciler(strategy, true, true);
+        final ErlReconcilingStrategy strategy = new ErlReconcilingStrategy(editor);
+        final IErlModule module = editor != null ? editor.getModule() : null;
+        final String path = module != null ? module.getFilePath() : null;
+        reconciler = new ErlReconciler(strategy, true, true, path, module, getEditor());
         reconciler.setProgressMonitor(new NullProgressMonitor());
+        reconciler.setIsAllowedToModifyDocument(false);
         reconciler.setDelay(500);
         return reconciler;
     }
 
     @Override
-    public IContentAssistant getContentAssistant(
-            final ISourceViewer sourceViewer) {
-        if (getEditor() != null) {
-            final ContentAssistant asst = new ContentAssistant();
-
-            asst.setContentAssistProcessor(new ErlContentAssistProcessor(
-                    sourceViewer, editor.getModule()),
-                    IDocument.DEFAULT_CONTENT_TYPE);
-
-            asst.enableAutoActivation(true);
-            asst.setAutoActivationDelay(500);
-            asst.enableAutoInsert(true);
-            asst.enablePrefixCompletion(false);
-            asst.setDocumentPartitioning(IErlangPartitions.ERLANG_PARTITIONING);
-
-            asst.setProposalPopupOrientation(IContentAssistant.PROPOSAL_OVERLAY);
-            asst.setContextInformationPopupOrientation(IContentAssistant.CONTEXT_INFO_ABOVE);
-            asst.setInformationControlCreator(getInformationControlCreator(sourceViewer));
-
-            return asst;
-        }
-        return null;
+    protected IErlProject getProject() {
+        return ErlangEngine.getInstance().getModelUtilService().getProject(getModule());
     }
 
-    /*
-     * @see
-     * SourceViewerConfiguration#getInformationControlCreator(ISourceViewer)
-     * 
-     * @since 2.0
-     */
+    @Override
+    protected IErlModule getModule() {
+        if (editor == null) {
+            return null;
+        }
+        return editor.getModule();
+    }
+
     @Override
     public IInformationControlCreator getInformationControlCreator(
             final ISourceViewer sourceViewer) {
         return new IInformationControlCreator() {
 
-            public IInformationControl createInformationControl(
-                    final Shell parent) {
+            @Override
+            public IInformationControl createInformationControl(final Shell parent) {
                 if (parent.getText().length() == 0
                         && BrowserInformationControl.isAvailable(parent)) {
                     final BrowserInformationControl info = new BrowserInformationControl(
@@ -184,16 +117,15 @@ public class EditorConfiguration extends ErlangSourceViewerConfiguration {
                         }
                     };
                     return info;
-                } else {
-                    return new DefaultInformationControl(parent,
-                            EditorsUI.getTooltipAffordanceString(),
-                            new ErlInformationPresenter(true));
                 }
+                return new DefaultInformationControl(parent,
+                        EditorsUI.getTooltipAffordanceString(),
+                        new ErlInformationPresenter(true));
             }
         };
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected Map getHyperlinkDetectorTargets(final ISourceViewer sourceViewer) {
         final Map map = super.getHyperlinkDetectorTargets(sourceViewer);
@@ -212,42 +144,4 @@ public class EditorConfiguration extends ErlangSourceViewerConfiguration {
             reconciler.reconcileNow();
         }
     }
-
-    @Override
-    public IQuickAssistAssistant getQuickAssistAssistant(
-            final ISourceViewer sourceViewer) {
-        final IQuickAssistAssistant assistant = new QuickAssistAssistant();
-        assistant.setQuickAssistProcessor(new ErlangQuickAssistProcessor());
-        assistant
-                .setInformationControlCreator(getQuickAssistAssistantInformationControlCreator());
-        return assistant;
-    }
-
-    /**
-     * Returns the information control creator for the quick assist assistant.
-     * 
-     * @return the information control creator
-     * @since 3.3
-     */
-    private IInformationControlCreator getQuickAssistAssistantInformationControlCreator() {
-        return new IInformationControlCreator() {
-            public IInformationControl createInformationControl(
-                    final Shell parent) {
-                final String affordance = getAdditionalInfoAffordanceString();
-                return new DefaultInformationControl(parent, affordance);
-            }
-        };
-    }
-
-    static final String getAdditionalInfoAffordanceString() {
-        if (!EditorsUI
-                .getPreferenceStore()
-                .getBoolean(
-                        AbstractDecoratedTextEditorPreferenceConstants.EDITOR_SHOW_TEXT_HOVER_AFFORDANCE)) {
-            return null;
-        }
-
-        return "Press 'Tab' from proposal table or click for focus";
-    }
-
 }

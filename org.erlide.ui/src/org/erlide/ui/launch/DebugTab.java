@@ -12,25 +12,24 @@
 package org.erlide.ui.launch;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.ui.AbstractLaunchConfigurationTab;
-import org.eclipse.jface.viewers.CheckStateChangedEvent;
-import org.eclipse.jface.viewers.CheckboxTreeViewer;
-import org.eclipse.jface.viewers.ICheckStateListener;
-import org.eclipse.jface.viewers.IStructuredContentProvider;
-import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.jface.viewers.ListViewer;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Image;
@@ -38,541 +37,304 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
-import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Tree;
-import org.erlide.core.erlang.ErlModelException;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlFolder;
-import org.erlide.core.erlang.IErlModel;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.core.erlang.IErlProject;
-import org.erlide.core.erlang.IOpenable;
-import org.erlide.core.erlang.IParent;
-import org.erlide.core.erlang.util.ErlideUtil;
-import org.erlide.jinterface.util.ErlLogger;
-import org.erlide.runtime.debug.ErlDebugConstants;
-import org.erlide.runtime.launch.ErlLaunchAttributes;
-import org.erlide.runtime.launch.ErlangLaunchConfigurationDelegate;
+import org.eclipse.swt.widgets.Shell;
+import org.erlide.backend.api.BackendData;
+import org.erlide.backend.api.ErlRuntimeAttributes;
+import org.erlide.debug.ui.utils.ModuleItemLabelProvider;
+import org.erlide.debug.ui.views.InterpretedModuleListContentProvider;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.IErlModel;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.runtime.api.ErlDebugFlags;
+import org.erlide.ui.dialogs.AddInterpretedModulesSelectionDialog;
 import org.erlide.ui.util.SWTUtil;
+
+import com.google.common.collect.Lists;
 
 /**
  * A tab in the Launch Config with erlang debugger parameters: the debug flags
  * for attaching and distruibuted debugging a checkbox tree of modules to
  * interpret upon launching. The checkbox tree classes are reused by
  * InterpretedModulesView
- * 
+ *
  */
 public class DebugTab extends AbstractLaunchConfigurationTab {
 
-	CheckboxTreeViewer checkboxTreeViewer;
-	private Button attachOnFirstCallCheck;
-	private Button attachOnBreakpointCheck;
-	private Button attachOnExitCheck;
-	private Button distributedDebugCheck;
-	private List<IErlModule> interpretedModules;
+    ListViewer listViewer;
+    private Button attachOnFirstCallCheck;
+    private Button attachOnBreakpointCheck;
+    private Button attachOnExitCheck;
+    private Button distributedDebugCheck;
+    private Button addButton;
+    private Button removeButton;
+    private InterpretedModuleListContentProvider contentProvider;
 
-	public static class TreeLabelProvider extends LabelProvider {
-		public TreeLabelProvider() {
-			super();
-		}
+    public static class ListLabelProvider extends LabelProvider {
 
-		@Override
-		public String getText(final Object element) {
-			if (element instanceof DebugTreeItem) {
-				final IErlElement item = ((DebugTreeItem) element).item;
-				if (item == null) {
-					ErlLogger.warn("Null item in DebugTreeItem %s", element
-							.toString());
-					return "---";
-				}
-				return item.getName();
-			}
-			return "!" + super.getText(element);
-		}
+        @Override
+        public String getText(final Object element) {
+            if (element instanceof IErlElement) {
+                final IErlElement erlElement = (IErlElement) element;
+                return erlElement.getName();
+            }
+            return "!" + super.getText(element);
+        }
 
-		@Override
-		public Image getImage(final Object element) {
-			return null;
-		}
-	}
+        @Override
+        public Image getImage(final Object element) {
+            return null;
+        }
+    }
 
-	public static class DebugTreeItem {
-		final IErlElement item;
-		final DebugTreeItem parent;
-		final List<DebugTreeItem> children = new ArrayList<DebugTreeItem>();
+    /**
+     * @wbp.parser.entryPoint
+     */
+    @Override
+    public void createControl(final Composite parent) {
+        final Composite comp = new Composite(parent, SWT.NONE);
+        setControl(comp);
+        final GridLayout topLayout = new GridLayout();
+        comp.setLayout(topLayout);
 
-		public DebugTreeItem(final IErlElement item, final DebugTreeItem parent) {
-			this.item = item;
-			this.parent = parent;
-		}
+        distributedDebugCheck = createCheckButton(comp, "Debug all connected nodes");
 
-		public DebugTreeItem getParent() {
-			return parent;
-		}
+        final Group attachGroup = SWTUtil.createGroup(comp, "Auto Attach", 1,
+                GridData.FILL_BOTH);
+        attachGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false));
+        attachOnFirstCallCheck = createCheckButton(attachGroup, "First &call");
+        attachOnBreakpointCheck = createCheckButton(attachGroup, "&Breakpoint");
+        attachOnExitCheck = createCheckButton(attachGroup, "E&xit");
 
-		public IErlElement getItem() {
-			return item;
-		}
+        distributedDebugCheck.addSelectionListener(fBasicSelectionListener);
+        attachOnFirstCallCheck.addSelectionListener(fBasicSelectionListener);
+        attachOnBreakpointCheck.addSelectionListener(fBasicSelectionListener);
+        attachOnExitCheck.addSelectionListener(fBasicSelectionListener);
 
-		public List<DebugTreeItem> getChildren() {
-			return children;
-		}
+        final Group interpretedModulesGroup = new Group(comp, SWT.NONE);
+        final GridData gd_interpretedModulesGroup = new GridData(SWT.FILL, SWT.CENTER,
+                false, false, 2, 1);
+        gd_interpretedModulesGroup.widthHint = 387;
+        interpretedModulesGroup.setLayoutData(gd_interpretedModulesGroup);
+        interpretedModulesGroup.setText("Interpreted modules");
+        interpretedModulesGroup.setLayout(new GridLayout(2, false));
 
-		public boolean areChildrenChecked(final CheckboxTreeViewer tree) {
-			for (final DebugTreeItem i : children) {
-				if (!tree.getChecked(i) || tree.getGrayed(i)) {
-					return false;
-				}
-			}
-			return true;
-		}
+        // final Label anyModuleHavingLabel = new Label(interpretedModulesGroup,
+        // SWT.WRAP);
+        // anyModuleHavingLabel.setLayoutData(new GridData(279, SWT.DEFAULT));
+        // anyModuleHavingLabel
+        // .setText("Any module having breakpoints enabled will be dynamically added to the list.\n\nThis widget is disabled for now, it takes 100%CPU for large projects. If you need to use \"attach on first call\" or \"attach on exit\", please mark the modules by setting a dummy breakpoint in them. Sorry for the inconvenience!");
 
-		public boolean areChildrenUnchecked(final CheckboxTreeViewer tree) {
-			for (final DebugTreeItem i : children) {
-				if (tree.getChecked(i) || tree.getGrayed(i)) {
-					return false;
-				}
-			}
-			return true;
-		}
+        listViewer = new ListViewer(interpretedModulesGroup, SWT.BORDER | SWT.MULTI);
+        listViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 
-		boolean addAllErlangModules(final IErlElement elem) {
-			if (elem instanceof IErlModule) {
-				children.add(new DebugTreeItem(elem, this));
-				return true;
-			} else if (elem instanceof IParent) {
-				try {
-					if (elem instanceof IErlFolder) {
-						final IErlFolder f = (IErlFolder) elem;
-						if (!f.isSourcePathParent()) {
-							return false;
-						}
-					}
-					if (elem instanceof IOpenable) {
-						final IOpenable o = (IOpenable) elem;
-						o.open(null);
-					}
-					final DebugTreeItem dti = new DebugTreeItem(elem, this);
-					final IParent p = (IParent) elem;
-					boolean addedAny = false;
-					for (final IErlElement i : p.getChildren()) {
-						addedAny |= dti.addAllErlangModules(i);
-					}
-					if (addedAny) {
-						children.add(dti);
-					}
-					return true;
-				} catch (final ErlModelException e) {
-					ErlLogger.warn(e);
-				}
-			}
-			return false;
-		}
+            @Override
+            public void selectionChanged(final SelectionChangedEvent event) {
+                final ISelection selection = event.getSelection();
+                removeButton.setEnabled(!selection.isEmpty());
+            }
+        });
+        // checkboxTreeViewer.addCheckStateListener(new ICheckStateListener() {
+        // @Override
+        // @SuppressWarnings("synthetic-access")
+        // public void checkStateChanged(final CheckStateChangedEvent event) {
+        // final DebugTreeItem dti = (DebugTreeItem) event.getElement();
+        // checkboxTreeViewer.setGrayed(dti, false);
+        // final boolean checked = event.getChecked();
+        // setSubtreeChecked(dti, checked);
+        // // checkUpwards(checkboxTreeViewer, dti, checked, false);
+        // updateLaunchConfigurationDialog();
+        // }
+        //
+        // });
+        listViewer.setLabelProvider(new ModuleItemLabelProvider());
+        contentProvider = new InterpretedModuleListContentProvider();
+        listViewer.setContentProvider(contentProvider);
+        final Control control = listViewer.getControl();
+        final GridData gd_list = new GridData(SWT.FILL, SWT.FILL, true, true, 1, 3);
+        gd_list.minimumWidth = 250;
+        gd_list.minimumHeight = 120;
+        gd_list.widthHint = 256;
+        gd_list.heightHint = 220;
+        control.setLayoutData(gd_list);
+        addButton = createPushButton(interpretedModulesGroup, "Add...", null);
+        addButton.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                final List<IErlModule> result = getModulesFromAddModulesDialog(getShell());
+                contentProvider.addModules(result);
+                listViewer.refresh();
+                updateLaunchConfigurationDialog();
+            }
+        });
+        removeButton = createPushButton(interpretedModulesGroup, "Remove", null);
+        removeButton.setEnabled(false);
+        removeButton.addSelectionListener(new SelectionAdapter() {
 
-		private void setGrayChecked(
-				final CheckboxTreeViewer checkboxTreeViewer,
-				final boolean grayed, final boolean checked) {
-			checkboxTreeViewer.setGrayed(this, grayed);
-			checkboxTreeViewer.setChecked(this, checked);
-		}
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                final IStructuredSelection selection = (IStructuredSelection) listViewer
+                        .getSelection();
+                for (final Object o : selection.toArray()) {
+                    contentProvider.removeModule((IErlModule) o);
+                }
+                listViewer.refresh();
+                updateLaunchConfigurationDialog();
+            }
+        });
+    }
 
-		private void updateMenuCategoryCheckedState(
-				final CheckboxTreeViewer checkboxTreeViewer) {
-			if (areChildrenUnchecked(checkboxTreeViewer)) {
-				setGrayChecked(checkboxTreeViewer, false, false);
-			} else if (areChildrenChecked(checkboxTreeViewer)) {
-				setGrayChecked(checkboxTreeViewer, false, true);
-			} else {
-				setGrayChecked(checkboxTreeViewer, true, true);
-			}
-			if (getParent() != null) {
-				getParent().updateMenuCategoryCheckedState(checkboxTreeViewer);
-			}
-		}
+    public static List<IErlModule> getModulesFromAddModulesDialog(final Shell shell) {
+        final List<IErlModule> result = Lists.newArrayList();
+        final AddInterpretedModulesSelectionDialog dialog = new AddInterpretedModulesSelectionDialog(
+                shell);
+        final int resultCode = dialog.open();
+        if (resultCode != IDialogConstants.OK_ID) {
+            return result;
+        }
+        final Object[] dialogResult = dialog.getResult();
+        if (dialogResult == null || dialogResult.length == 0) {
+            return result;
+        }
+        final IErlModel model = ErlangEngine.getInstance().getModel();
+        for (final Object o : dialogResult) {
+            if (o instanceof IFile) {
+                final IFile file = (IFile) o;
+                result.add(model.findModule(file));
+            }
+        }
+        return result;
+    }
 
-		public void setChecked(final CheckboxTreeViewer checkboxTreeViewer,
-				final Collection<IErlModule> list) {
-			setGrayChecked(checkboxTreeViewer, false, list.contains(item));
-			for (final DebugTreeItem c : children) {
-				c.setChecked(checkboxTreeViewer, list);
-				c.getParent()
-						.updateMenuCategoryCheckedState(checkboxTreeViewer);
-			}
-		}
-	}
+    // protected void setSubtreeChecked(final DebugTreeItem dti,
+    // final boolean checked) {
+    // final List<DebugTreeItem> children = dti.getChildren();
+    // if (children == null || children.size() == 0) {
+    // interpretOrDeinterpret(dti, checked);
+    // return;
+    // }
+    // for (final DebugTreeItem i : children) {
+    // checkboxTreeViewer.setChecked(i, checked);
+    // setSubtreeChecked(i, checked);
+    // }
+    // }
 
-	public static class TreeContentProvider implements
-			IStructuredContentProvider, ITreeContentProvider {
-		private DebugTreeItem root;
+    // public static void checkUpwards(final CheckboxTreeViewer ctv,
+    // final DebugTreeItem dti, final boolean checked, final boolean grayed) {
+    // for (DebugTreeItem parent = dti.getParent(); parent != null; parent =
+    // parent
+    // .getParent()) {
+    // ctv.setChecked(parent, checked);
+    // }
+    // }
 
-		public TreeContentProvider() {
-			super();
-		}
+    @Override
+    public void setDefaults(final ILaunchConfigurationWorkingCopy config) {
+        config.setAttribute(ErlRuntimeAttributes.DEBUG_INTERPRET_MODULES,
+                new ArrayList<String>());
+        config.setAttribute(ErlRuntimeAttributes.DEBUG_FLAGS,
+                ErlDebugFlags.getFlag(ErlDebugFlags.DEFAULT_DEBUG_FLAGS));
+    }
 
-		public void inputChanged(final Viewer viewer, final Object oldInput,
-				final Object newInput) {
-			try {
-				setRoot(new DebugTreeItem(null, null));
-				if (newInput instanceof ILaunchConfiguration) {
-					final ILaunchConfiguration input = (ILaunchConfiguration) newInput;
-					final String projs = input.getAttribute(
-							ErlLaunchAttributes.PROJECTS, "").trim();
-					if (projs.length() == 0) {
-						return;
-					}
-					final String[] projNames = projs.split(";");
-					if (projNames == null) {
-						return;
-					}
-					final IErlModel model = ErlangCore.getModel();
-					for (final String projName : projNames) {
-						final IErlElement prj = model
-								.getErlangProject(projName);
-						getRoot().addAllErlangModules(prj);
-					}
-				}
-			} catch (final CoreException e1) {
-			}
-		}
+    @Override
+    public void initializeFrom(final ILaunchConfiguration config) {
+        if (listViewer != null) {
+            listViewer.setInput(config);
+        }
 
-		public void dispose() {
-		}
+        final Set<String> interpret = BackendData.addBreakpointProjectsAndModules(null,
+                new ArrayList<String>());
+        contentProvider.addModules(interpret);
 
-		public Object[] getElements(final Object inputElement) {
-			return getChildren(getRoot());
-		}
+        EnumSet<ErlDebugFlags> debugFlags;
+        try {
+            final int attribute = config.getAttribute(ErlRuntimeAttributes.DEBUG_FLAGS,
+                    ErlDebugFlags.getFlag(ErlDebugFlags.DEFAULT_DEBUG_FLAGS));
+            debugFlags = ErlDebugFlags.makeSet(attribute);
+        } catch (final CoreException e) {
+            debugFlags = ErlDebugFlags.DEFAULT_DEBUG_FLAGS;
+        }
+        setFlagCheckboxes(debugFlags);
+    }
 
-		public Object[] getChildren(final Object parentElement) {
-			final DebugTreeItem dti = (DebugTreeItem) parentElement;
-			return dti.children.toArray();
-		}
+    @Override
+    public void performApply(final ILaunchConfigurationWorkingCopy config) {
+        config.setAttribute(ErlRuntimeAttributes.DEBUG_FLAGS,
+                ErlDebugFlags.getFlag(getFlagCheckboxes()));
+        final List<String> r = new ArrayList<String>();
+        for (final Object o : contentProvider.getElements(null)) {
+            final IErlModule module = (IErlModule) o;
+            r.add(ErlangEngine.getInstance().getModelUtilService().getProject(module)
+                    .getName()
+                    + ":" + module.getName());
+        }
+        config.setAttribute(ErlRuntimeAttributes.DEBUG_INTERPRET_MODULES, r);
+    }
 
-		public Object getParent(final Object element) {
-			final DebugTreeItem dti = (DebugTreeItem) element;
-			return dti.getParent();
-		}
+    @Override
+    public String getName() {
+        return "Debug";
+    }
 
-		public boolean hasChildren(final Object element) {
-			return getChildren(element).length > 0;
-		}
+    @Override
+    public boolean isValid(final ILaunchConfiguration config) {
+        return true;
+    }
 
-		public DebugTreeItem getRoot() {
-			return root;
-		}
+    /**
+     * check or uncheck the four flag checkboxes
+     *
+     * @param debugFlags
+     *            flags
+     */
+    private void setFlagCheckboxes(final EnumSet<ErlDebugFlags> debugFlags) {
+        if (attachOnFirstCallCheck == null) {
+            // I don't know why these are null sometimes...
+            return;
+        }
+        attachOnFirstCallCheck.setSelection(debugFlags
+                .contains(ErlDebugFlags.ATTACH_ON_FIRST_CALL));
+        attachOnBreakpointCheck.setSelection(debugFlags
+                .contains(ErlDebugFlags.ATTACH_ON_BREAKPOINT));
+        attachOnExitCheck.setSelection(debugFlags.contains(ErlDebugFlags.ATTACH_ON_EXIT));
+        distributedDebugCheck.setSelection(debugFlags
+                .contains(ErlDebugFlags.DISTRIBUTED_DEBUG));
+    }
 
-		public void setRoot(final DebugTreeItem root) {
-			this.root = root;
-		}
-	}
+    /**
+     * get flag settings by reading checkboxes
+     *
+     * @return flags as int
+     */
+    private EnumSet<ErlDebugFlags> getFlagCheckboxes() {
+        final EnumSet<ErlDebugFlags> result = EnumSet.noneOf(ErlDebugFlags.class);
+        if (attachOnFirstCallCheck.getSelection()) {
+            result.add(ErlDebugFlags.ATTACH_ON_FIRST_CALL);
+        }
+        if (attachOnBreakpointCheck.getSelection()) {
+            result.add(ErlDebugFlags.ATTACH_ON_BREAKPOINT);
+        }
+        if (attachOnExitCheck.getSelection()) {
+            result.add(ErlDebugFlags.ATTACH_ON_EXIT);
+        }
+        if (distributedDebugCheck.getSelection()) {
+            result.add(ErlDebugFlags.DISTRIBUTED_DEBUG);
+        }
+        return result;
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(org.eclipse
-	 * .swt.widgets.Composite)
-	 */
-	/**
-	 * @wbp.parser.entryPoint
-	 */
-	public void createControl(final Composite parent) {
-		interpretedModules = new ArrayList<IErlModule>();
+    private final SelectionListener fBasicSelectionListener = new SelectionListener() {
+        @Override
+        public void widgetDefaultSelected(final SelectionEvent e) {
+            updateLaunchConfigurationDialog();
+        }
 
-		final Composite comp = new Composite(parent, SWT.NONE);
-		setControl(comp);
-		final GridLayout topLayout = new GridLayout();
-		comp.setLayout(topLayout);
-
-		distributedDebugCheck = createCheckButton(comp,
-				"Debug all connected nodes");
-
-		final Group attachGroup = SWTUtil.createGroup(comp, "Auto Attach", 1,
-				GridData.FILL_BOTH);
-		attachGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false,
-				false));
-		attachOnFirstCallCheck = createCheckButton(attachGroup, "First &call");
-		attachOnBreakpointCheck = createCheckButton(attachGroup, "&Breakpoint");
-		attachOnExitCheck = createCheckButton(attachGroup, "E&xit");
-
-		distributedDebugCheck.addSelectionListener(fBasicSelectionListener);
-		attachOnFirstCallCheck.addSelectionListener(fBasicSelectionListener);
-		attachOnBreakpointCheck.addSelectionListener(fBasicSelectionListener);
-		attachOnExitCheck.addSelectionListener(fBasicSelectionListener);
-
-		final Group interpretedModulesGroup = new Group(comp, SWT.NONE);
-		interpretedModulesGroup.setText("Interpreted modules");
-		final GridData gd_interpretedModulesGroup = new GridData();
-		interpretedModulesGroup.setLayoutData(gd_interpretedModulesGroup);
-		interpretedModulesGroup.setLayout(new GridLayout());
-
-		final Label anyModuleHavingLabel = new Label(interpretedModulesGroup,
-				SWT.WRAP);
-		anyModuleHavingLabel.setLayoutData(new GridData(279, SWT.DEFAULT));
-		anyModuleHavingLabel
-				.setText("Any module having breakpoints enabled will be dynamically added to the list.");
-
-		checkboxTreeViewer = new CheckboxTreeViewer(interpretedModulesGroup,
-				SWT.BORDER);
-		checkboxTreeViewer.addCheckStateListener(new ICheckStateListener() {
-			@SuppressWarnings("synthetic-access")
-			public void checkStateChanged(final CheckStateChangedEvent event) {
-				final DebugTab.DebugTreeItem dti = (DebugTreeItem) event
-						.getElement();
-				checkboxTreeViewer.setGrayed(dti, false);
-				final boolean checked = event.getChecked();
-				setSubtreeChecked(dti, checked);
-				checkUpwards(checkboxTreeViewer, dti, checked, false);
-				updateLaunchConfigurationDialog();
-			}
-
-		});
-		checkboxTreeViewer.setLabelProvider(new TreeLabelProvider());
-		checkboxTreeViewer.setContentProvider(new TreeContentProvider());
-		final Tree tree = checkboxTreeViewer.getTree();
-		final GridData gd_tree = new GridData(SWT.FILL, SWT.FILL, true, true);
-		gd_tree.minimumWidth = 250;
-		gd_tree.minimumHeight = 120;
-		gd_tree.widthHint = 256;
-		gd_tree.heightHint = 220;
-		tree.setLayoutData(gd_tree);
-	}
-
-	protected void setSubtreeChecked(final DebugTreeItem dti,
-			final boolean checked) {
-		final List<DebugTreeItem> children = dti.getChildren();
-		if (children == null || children.size() == 0) {
-			interpretOrDeinterpret(dti, checked);
-			return;
-		}
-		for (final DebugTreeItem i : children) {
-			checkboxTreeViewer.setChecked(i, checked);
-			setSubtreeChecked(i, checked);
-		}
-	}
-
-	private void interpretOrDeinterpret(final DebugTreeItem dti,
-			final boolean checked) {
-		final IErlModule m = (IErlModule) dti.getItem();
-		if (checked) {
-			interpretedModules.add(m);
-		} else {
-			interpretedModules.remove(m);
-		}
-	}
-
-	public static void checkUpwards(final CheckboxTreeViewer ctv,
-			final DebugTreeItem dti, final boolean checked, final boolean grayed) {
-		for (DebugTreeItem parent = dti.getParent(); parent != null; parent = parent
-				.getParent()) {
-			checkParent(parent, ctv);
-		}
-	}
-
-	private static void checkParent(final DebugTreeItem parent,
-			final CheckboxTreeViewer ctv) {
-		int nChecked = 0, nUnchecked = 0;
-		for (final DebugTreeItem i : parent.getChildren()) {
-			if (ctv.getChecked(i)) {
-				++nChecked;
-			} else {
-				++nUnchecked;
-			}
-		}
-		final boolean gray = nChecked > 0 && nUnchecked > 0;
-		final boolean check = !gray && nUnchecked == 0;
-		ctv.setGrayChecked(parent, gray);
-		if (check) {
-			ctv.setChecked(parent, true);
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.debug.ui.ILaunchConfigurationTab#setDefaults(org.eclipse.
-	 * debug.core.ILaunchConfigurationWorkingCopy)
-	 */
-	public void setDefaults(final ILaunchConfigurationWorkingCopy config) {
-		config.setAttribute(ErlLaunchAttributes.DEBUG_INTERPRET_MODULES,
-				new ArrayList<String>());
-		config.setAttribute(ErlLaunchAttributes.DEBUG_FLAGS,
-				ErlDebugConstants.DEFAULT_DEBUG_FLAGS);
-	}
-
-	/**
-	 * Find modules from string list add to IFile-list
-	 * 
-	 * @param interpret
-	 *            the list of strings from prefs (projectName:fileName;... or
-	 *            moduleName;...)
-	 * @param interpretedModules
-	 *            collection that the IFile-s are added to
-	 */
-	public static void addModules(final Collection<String> interpret,
-			final Collection<IErlModule> interpretedModules) {
-		final IErlModel model = ErlangCore.getModel();
-		for (final String i : interpret) {
-			final String[] pm = i.split(":");
-			IErlModule m = null;
-			if (pm.length > 1) {
-				final IErlProject p = model.getErlangProject(pm[0]);
-				final String mName = pm[1];
-				try {
-					final String s = ErlideUtil.hasModuleExtension(mName) ? mName
-							: mName + ".erl";
-					m = p.getModule(s);
-				} catch (final ErlModelException e) {
-					ErlLogger.warn(e);
-				}
-			} else {
-				m = model.findModule(i + ".erl");
-			}
-			if (m != null) {
-				if (!interpretedModules.contains(m)) {
-					interpretedModules.add(m);
-				}
-			}
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.debug.ui.ILaunchConfigurationTab#initializeFrom(org.eclipse
-	 * .debug.core.ILaunchConfiguration)
-	 */
-	@SuppressWarnings("unchecked")
-	public void initializeFrom(final ILaunchConfiguration config) {
-		List<String> interpret;
-		String prjs;
-		try {
-			interpret = config.getAttribute(
-					ErlLaunchAttributes.DEBUG_INTERPRET_MODULES,
-					new ArrayList<String>());
-			prjs = config.getAttribute(ErlLaunchAttributes.PROJECTS, "").trim();
-		} catch (final CoreException e1) {
-			interpret = new ArrayList<String>();
-			prjs = "";
-		}
-		final String[] projectNames = (prjs.length() == 0) ? new String[] {}
-				: prjs.split(";");
-		final Set<IProject> projects = new HashSet<IProject>();
-		for (final String s : projectNames) {
-			final IProject project = ResourcesPlugin.getWorkspace().getRoot()
-					.getProject(s);
-			if (project == null) {
-				continue;
-			}
-			projects.add(project);
-		}
-
-		interpret = ErlangLaunchConfigurationDelegate
-				.addBreakpointProjectsAndModules(projects, interpret);
-		interpretedModules = new ArrayList<IErlModule>();
-
-		addModules(interpret, interpretedModules);
-
-		int debugFlags;
-		try {
-			debugFlags = config.getAttribute(ErlLaunchAttributes.DEBUG_FLAGS,
-					ErlDebugConstants.DEFAULT_DEBUG_FLAGS);
-		} catch (final CoreException e) {
-			debugFlags = ErlDebugConstants.DEFAULT_DEBUG_FLAGS;
-		}
-		setFlagCheckboxes(debugFlags);
-
-		if (checkboxTreeViewer != null) {
-			checkboxTreeViewer.setInput(config);
-			final DebugTreeItem root = ((TreeContentProvider) checkboxTreeViewer
-					.getContentProvider()).getRoot();
-			root.setChecked(checkboxTreeViewer, interpretedModules);
-			checkboxTreeViewer.expandAll();
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.debug.ui.ILaunchConfigurationTab#performApply(org.eclipse
-	 * .debug.core.ILaunchConfigurationWorkingCopy)
-	 */
-	public void performApply(final ILaunchConfigurationWorkingCopy config) {
-		config.setAttribute(ErlLaunchAttributes.DEBUG_FLAGS,
-				getFlagCheckboxes());
-		final List<String> r = new ArrayList<String>();
-		for (final IErlModule m : interpretedModules) {
-			r.add(m.getProject().getName() + ":" + m.getName());
-		}
-		config.setAttribute(ErlLaunchAttributes.DEBUG_INTERPRET_MODULES, r);
-	}
-
-	public String getName() {
-		return "Debug";
-	}
-
-	@Override
-	public boolean isValid(final ILaunchConfiguration config) {
-		return true;
-	}
-
-	/**
-	 * check or uncheck the four flag checkboxes
-	 * 
-	 * @param debugFlags
-	 *            flags
-	 */
-	private void setFlagCheckboxes(final int debugFlags) {
-		if (attachOnFirstCallCheck == null) {
-			// I don't know why these are null sometimes...
-			return;
-		}
-		int flag = debugFlags & ErlDebugConstants.ATTACH_ON_FIRST_CALL;
-		attachOnFirstCallCheck.setSelection(flag != 0);
-		flag = debugFlags & ErlDebugConstants.ATTACH_ON_BREAKPOINT;
-		attachOnBreakpointCheck.setSelection(flag != 0);
-		flag = debugFlags & ErlDebugConstants.ATTACH_ON_EXIT;
-		attachOnExitCheck.setSelection(flag != 0);
-		flag = debugFlags & ErlDebugConstants.DISTRIBUTED_DEBUG;
-		distributedDebugCheck.setSelection(flag != 0);
-	}
-
-	/**
-	 * get flag settings by reading checkboxes
-	 * 
-	 * @return flags as int
-	 */
-	private int getFlagCheckboxes() {
-		int result = 0;
-		if (attachOnFirstCallCheck.getSelection()) {
-			result |= ErlDebugConstants.ATTACH_ON_FIRST_CALL;
-		}
-		if (attachOnBreakpointCheck.getSelection()) {
-			result |= ErlDebugConstants.ATTACH_ON_BREAKPOINT;
-		}
-		if (attachOnExitCheck.getSelection()) {
-			result |= ErlDebugConstants.ATTACH_ON_EXIT;
-		}
-		if (distributedDebugCheck.getSelection()) {
-			result |= ErlDebugConstants.DISTRIBUTED_DEBUG;
-		}
-		return result;
-	}
-
-	private final SelectionListener fBasicSelectionListener = new SelectionListener() {
-		@SuppressWarnings("synthetic-access")
-		public void widgetDefaultSelected(final SelectionEvent e) {
-			updateLaunchConfigurationDialog();
-		}
-
-		@SuppressWarnings("synthetic-access")
-		public void widgetSelected(final SelectionEvent e) {
-			updateLaunchConfigurationDialog();
-		}
-	};
+        @Override
+        public void widgetSelected(final SelectionEvent e) {
+            updateLaunchConfigurationDialog();
+        }
+    };
 
 }

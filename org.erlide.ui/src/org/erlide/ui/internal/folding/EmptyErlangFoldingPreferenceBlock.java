@@ -12,48 +12,47 @@ import org.erlide.ui.editors.erl.folding.IErlangFoldingPreferenceBlock;
  * Empty preference block for extensions to the
  * <code>org.erlide.ui.erlangFoldingStructureProvider</code> extension point
  * that do not specify their own.
- * 
- * @since 3.0
  */
 
-public class EmptyErlangFoldingPreferenceBlock implements
-		IErlangFoldingPreferenceBlock {
+public class EmptyErlangFoldingPreferenceBlock implements IErlangFoldingPreferenceBlock {
 
-	// TODO fattar ju inget av detta, varf?r skapar de kontroller h?r??
-	public Control createControl(final Composite composite) {
-		final Composite inner = new Composite(composite, SWT.NONE);
-		inner.setLayout(new GridLayout(3, false));
+    @Override
+    public Control createControl(final Composite composite) {
+        final Composite inner = new Composite(composite, SWT.NONE);
+        inner.setLayout(new GridLayout(3, false));
 
-		Label label = new Label(inner, SWT.CENTER);
-		GridData gd = new GridData(GridData.FILL_BOTH);
-		gd.widthHint = 30;
-		label.setLayoutData(gd);
+        Label label = new Label(inner, SWT.CENTER);
+        GridData gd = new GridData(GridData.FILL_BOTH);
+        gd.widthHint = 30;
+        label.setLayoutData(gd);
 
-		label = new Label(inner, SWT.CENTER);
-		// TODO
-		// label.setText(FoldingMessages.EmptyJavaFoldingPreferenceBlock_emptyCaption);
-		label.setText("");
-		gd = new GridData(GridData.CENTER);
-		label.setLayoutData(gd);
+        label = new Label(inner, SWT.CENTER);
+        label.setText("");
+        gd = new GridData(GridData.CENTER);
+        label.setLayoutData(gd);
 
-		label = new Label(inner, SWT.CENTER);
-		gd = new GridData(GridData.FILL_BOTH);
-		gd.widthHint = 30;
-		label.setLayoutData(gd);
+        label = new Label(inner, SWT.CENTER);
+        gd = new GridData(GridData.FILL_BOTH);
+        gd.widthHint = 30;
+        label.setLayoutData(gd);
 
-		return inner;
-	}
+        return inner;
+    }
 
-	public void initialize() {
-	}
+    @Override
+    public void initialize() {
+    }
 
-	public void performOk() {
-	}
+    @Override
+    public void performOk() {
+    }
 
-	public void performDefaults() {
-	}
+    @Override
+    public void performDefaults() {
+    }
 
-	public void dispose() {
-	}
+    @Override
+    public void dispose() {
+    }
 
 }

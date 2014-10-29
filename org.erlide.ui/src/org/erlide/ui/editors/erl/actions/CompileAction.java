@@ -14,15 +14,16 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.jface.action.Action;
 import org.eclipse.ui.IWorkbenchSite;
+import org.erlide.backend.BackendCore;
 import org.erlide.core.builder.BuildResource;
 import org.erlide.core.builder.BuilderHelper;
-import org.erlide.core.builder.CompilerPreferences;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.core.erlang.IOldErlangProjectProperties;
-import org.erlide.jinterface.backend.Backend;
-import org.erlide.ui.editors.erl.ErlangEditor;
-import org.osgi.service.prefs.BackingStoreException;
+import org.erlide.core.builder.CompilerOptions;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.root.IErlProject;
+import org.erlide.runtime.api.IOtpRpc;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
+import org.erlide.ui.editors.erl.ErlEditorActionBarContributor;
 
 import com.ericsson.otp.erlang.OtpErlangList;
 
@@ -38,34 +39,42 @@ public class CompileAction extends Action {
 
     @Override
     public void run() {
-        final ErlangEditor editor = (ErlangEditor) getSite().getPage()
+        final AbstractErlangEditor editor = (AbstractErlangEditor) getSite().getPage()
                 .getActiveEditor();
         final IErlModule module = editor.getModule();
         if (module == null) {
             return;
         }
-        final Backend b = ErlangCore.getBackendManager().getIdeBackend();
 
         final IResource resource = module.getResource();
         final IProject project = resource.getProject();
-        BuildResource bres = new BuildResource(resource);
-        CompilerPreferences prefs = new CompilerPreferences(project);
-        try {
-            prefs.load();
-        } catch (BackingStoreException e1) {
-            e1.printStackTrace();
+        if (project == null) {
+            return;
         }
-        OtpErlangList compilerOptions = prefs.export();
-        final IOldErlangProjectProperties pprefs = ErlangCore
-                .getProjectProperties(project);
+        final IErlProject eproject = ErlangEngine.getInstance().getModelUtilService()
+                .getProject(module);
+        if (eproject == null) {
+            return;
+        }
+        final IOtpRpc b = BackendCore.getBuildBackend(eproject);
+
+        final BuildResource bres = new BuildResource(resource);
+        final CompilerOptions prefs = new CompilerOptions(project);
+        prefs.load();
+        final OtpErlangList compilerOptions = prefs.export();
+        final IErlProject erlProject = ErlangEngine.getInstance().getModel()
+                .getErlangProject(project);
 
         if ("erl".equals(resource.getFileExtension())) {
-            helper.compileErl(project, bres, pprefs.getOutputDir()
+            helper.compileErl(project, bres, erlProject.getProperties().getOutputDir()
                     .toString(), b, compilerOptions);
         }
         if ("yrl".equals(resource.getFileExtension())) {
             helper.compileYrl(project, bres, b, compilerOptions);
         }
+        final ErlEditorActionBarContributor status = (ErlEditorActionBarContributor) editor
+                .getEditorSite().getActionBarContributor();
+        status.displayMessage(String.format("File '%s' was compiled.", resource.getName()));
     }
 
     public IWorkbenchSite getSite() {

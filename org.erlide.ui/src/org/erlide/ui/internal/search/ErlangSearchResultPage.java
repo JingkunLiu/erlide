@@ -31,9 +31,9 @@ import org.eclipse.ui.actions.ActionGroup;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.IPageSite;
 import org.eclipse.ui.part.IShowInTargetList;
-import org.erlide.core.builder.MarkerUtils;
-import org.erlide.core.erlang.ErlModelException;
-import org.erlide.core.erlang.IErlModule;
+import org.erlide.engine.model.builder.MarkerUtils;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 import org.erlide.ui.editors.erl.ErlangEditor;
 import org.erlide.ui.editors.util.EditorUtility;
 
@@ -51,12 +51,6 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
             fLabelProvider = labelProvider;
         }
 
-        /*
-         * (non-Javadoc)
-         * 
-         * @see
-         * org.eclipse.jface.viewers.ViewerComparator#category(java.lang.Object)
-         */
         @Override
         public int category(final Object element) {
             if (element instanceof IContainer) {
@@ -65,7 +59,6 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
             return 2;
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public int compare(final Viewer viewer, final Object e1, final Object e2) {
             final int cat1 = category(e1);
@@ -102,6 +95,7 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
 
     private static final String[] SHOW_IN_TARGETS = new String[] { IPageLayout.ID_PROJECT_EXPLORER };
     private static final IShowInTargetList SHOW_IN_TARGET_LIST = new IShowInTargetList() {
+        @Override
         @SuppressWarnings("synthetic-access")
         public String[] getShowInTargetIds() {
             return SHOW_IN_TARGETS;
@@ -145,20 +139,18 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
     protected void configureTableViewer(final TableViewer viewer) {
         viewer.setUseHashlookup(true);
         viewer.setLabelProvider(new DecoratingStyledCellLabelProvider(
-                getInnerLabelProvider(), PlatformUI.getWorkbench()
-                        .getDecoratorManager().getLabelDecorator(), null));
+                getInnerLabelProvider(), PlatformUI.getWorkbench().getDecoratorManager()
+                        .getLabelDecorator(), null));
         viewer.setContentProvider(new ErlangSearchTableContentProvider(this));
-        viewer.setComparator(new DecoratorIgnoringViewerSorter(
-                getInnerLabelProvider()));
-        fContentProvider = (IErlSearchContentProvider) viewer
-                .getContentProvider();
+        viewer.setComparator(new DecoratorIgnoringViewerSorter(getInnerLabelProvider()));
+        fContentProvider = (IErlSearchContentProvider) viewer.getContentProvider();
         addDragAdapters(viewer);
     }
 
     private SearchResultLabelProvider getInnerLabelProvider() {
         if (innerLabelProvider == null) {
-            innerLabelProvider = new SearchResultLabelProvider(this,
-                    fCurrentSortOrder, false);
+            innerLabelProvider = new SearchResultLabelProvider(this, fCurrentSortOrder,
+                    false);
         }
         return innerLabelProvider;
     }
@@ -168,51 +160,42 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
         viewer.setUseHashlookup(true);
         innerLabelProvider = new SearchResultLabelProvider(this,
                 SearchResultLabelProvider.SHOW_LABEL, true);
-        viewer.setLabelProvider(new DecoratingStyledCellLabelProvider(
-                innerLabelProvider, PlatformUI.getWorkbench()
-                        .getDecoratorManager().getLabelDecorator(), null));
-        viewer.setContentProvider(new ErlangSearchTreeContentProvider(viewer,
-                this));
-        viewer.setComparator(new DecoratorIgnoringViewerSorter(
-                innerLabelProvider));
-        fContentProvider = (IErlSearchContentProvider) viewer
-                .getContentProvider();
+        viewer.setLabelProvider(new DecoratingStyledCellLabelProvider(innerLabelProvider,
+                PlatformUI.getWorkbench().getDecoratorManager().getLabelDecorator(), null));
+        viewer.setContentProvider(new ErlangSearchTreeContentProvider(viewer, this));
+        viewer.setComparator(new DecoratorIgnoringViewerSorter(innerLabelProvider));
+        fContentProvider = (IErlSearchContentProvider) viewer.getContentProvider();
         addDragAdapters(viewer);
     }
 
     @Override
-    protected void showMatch(final Match match, final int offset,
-            final int length, final boolean activate) throws PartInitException {
+    protected void showMatch(final Match match, final int offset, final int length,
+            final boolean activate) throws PartInitException {
         final Object element = match.getElement();
         if (element instanceof ErlangSearchElement) {
             final ErlangSearchElement ese = (ErlangSearchElement) element;
             final IErlModule module = ese.getModule();
-            try {
-                final IEditorPart editor = EditorUtility.openInEditor(module);
-                if (offset != 0) {
-                    if (editor instanceof ErlangEditor) {
-                        final ErlangEditor ee = (ErlangEditor) editor;
-                        ee.selectAndReveal(offset, length);
-                    } else if (editor != null) {
-                        showWithMarker(editor, module, offset, length);
-                    }
+            final IEditorPart editor = EditorUtility.openInEditor(module);
+            if (offset != 0) {
+                if (editor instanceof ErlangEditor) {
+                    final AbstractErlangEditor ee = (AbstractErlangEditor) editor;
+                    ee.selectAndReveal(offset, length);
+                } else if (editor != null) {
+                    showWithMarker(editor, module, offset, length);
                 }
-            } catch (final ErlModelException e) {
             }
         }
     }
 
-    private void showWithMarker(final IEditorPart editor,
-            final IErlModule module, final int offset, final int length)
-            throws PartInitException {
+    private void showWithMarker(final IEditorPart editor, final IErlModule module,
+            final int offset, final int length) throws PartInitException {
         IMarker marker = null;
         try {
             marker = MarkerUtils.createSearchResultMarker(module,
                     NewSearchUI.SEARCH_MARKER, offset, length);
             IDE.gotoMarker(editor, marker);
         } catch (final CoreException e) {
-            throw new PartInitException(
-                    "SearchMessages.FileSearchPage_error_marker", e);
+            throw new PartInitException("SearchMessages.FileSearchPage_error_marker", e);
         } finally {
             if (marker != null) {
                 try {
@@ -234,8 +217,8 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
     protected void fillContextMenu(final IMenuManager mgr) {
         super.fillContextMenu(mgr);
         addSortActions(mgr);
-        fActionGroup.setContext(new ActionContext(getSite()
-                .getSelectionProvider().getSelection()));
+        fActionGroup.setContext(new ActionContext(getSite().getSelectionProvider()
+                .getSelection()));
         fActionGroup.fillContextMenu(mgr);
     }
 
@@ -294,11 +277,6 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
 
     public void setSortOrder(final int sortOrder) {
         fCurrentSortOrder = sortOrder;
-        // final DecoratingLabelProvider lpWrapper = (DecoratingLabelProvider)
-        // getViewer()
-        // .getLabelProvider();
-        // FIXME ((LabelProvider)
-        // lpWrapper.getLabelProvider()).setOrder(sortOrder);
         getViewer().refresh();
         getSettings().put(KEY_SORTING, fCurrentSortOrder);
     }
@@ -358,8 +336,8 @@ public class ErlangSearchResultPage extends AbstractTextSearchViewPage {
                 final int fileCount = getInput().getElements().length;
                 if (itemCount < fileCount) {
                     final String format = "{0} (showing {1} of {2} files)";
-                    return MessageFormat.format(format, label, new Integer(
-                            itemCount), new Integer(fileCount));
+                    return MessageFormat.format(format, label,
+                            Integer.valueOf(itemCount), Integer.valueOf(fileCount));
                 }
             }
         }

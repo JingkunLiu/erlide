@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cheatsheet
+      title="Quick start">
+   <intro>
+   <description>
+         <b>Note: work in progress!</b><br/><br/>
+
+Thanks to <b>Eli Liang</b> for writing this guide.
+<br/>
+   </description>
+   </intro>
+   <item
+         title="Configure the Erlang runtime">
+      <description>
+      Configure the Erlang runtime on the X-&gt;Workbench icon on the right side of the main eclipse window.
+
+Select <b>Window &gt; Open Perspective &gt; Java</b> in
+   </item>
+</cheatsheet>

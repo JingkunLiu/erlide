@@ -10,87 +10,83 @@
  *******************************************************************************/
 package org.erlide.ui.internal.search;
 
-import java.util.Collection;
-
-import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.IWorkbenchSite;
-import org.erlide.ui.editors.erl.ErlangEditor;
+import org.erlide.engine.services.search.ErlSearchScope;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 
 /**
  * Finds references to the selected element in the enclosing project of the
- * selected element. The action is applicable to selections representing a Java
- * element.
- * 
+ * selected element. The action is applicable to selections representing a
+ * Erlang element.
+ *
  * <p>
  * This class may be instantiated; it is not intended to be subclassed.
  * </p>
- * 
+ *
  * @since 3.0
  */
 public class FindImplementorsInProjectAction extends FindImplementorsAction {
 
-	/**
-	 * Creates a new <code>FindReferencesInProjectAction</code>. The action
-	 * requires that the selection provided by the site's selection provider is
-	 * of type <code>IStructuredSelection</code>.
-	 * 
-	 * @param site
-	 *            the site providing context information for this action
-	 */
-	public FindImplementorsInProjectAction(final IWorkbenchSite site) {
-		super(site);
-	}
+    /**
+     * Creates a new <code>FindReferencesInProjectAction</code>. The action
+     * requires that the selection provided by the site's selection provider is
+     * of type <code>IStructuredSelection</code>.
+     *
+     * @param site
+     *            the site providing context information for this action
+     */
+    public FindImplementorsInProjectAction(final IWorkbenchSite site) {
+        super(site);
+    }
 
-	/**
-	 * Note: This constructor is for internal use only. Clients should not call
-	 * this constructor.
-	 * 
-	 * @param editor
-	 *            the Java editor
-	 */
-	public FindImplementorsInProjectAction(final ErlangEditor editor) {
-		super(editor);
-	}
+    /**
+     * Note: This constructor is for internal use only. Clients should not call
+     * this constructor.
+     *
+     * @param editor
+     *            the Erlang editor
+     */
+    public FindImplementorsInProjectAction(final AbstractErlangEditor editor) {
+        super(editor);
+    }
 
-	@Override
-	void init() {
-		setText("Project");
-		setToolTipText("Find declarations in selected projects");
-		// FIXME setImageDescriptor(JavaPluginImages.DESC_OBJS_SEARCH_REF);
-		// FIXME PlatformUI.getWorkbench().getHelpSystem().setHelp(this,
-		// IJavaHelpContextIds.FIND_REFERENCES_IN_PROJECT_ACTION);
-	}
+    @Override
+    void init() {
+        setText("Project");
+        setToolTipText("Find declarations in selected projects");
+    }
 
-	@Override
-	protected Collection<IResource> getScope() {
-		return getProjectScope();
-	}
+    @Override
+    protected ErlSearchScope getScope() throws CoreException {
+        return getProjectScope();
+    }
 
-	@Override
-	protected String getScopeDescription() {
-		return SearchUtil.getProjectScopeDescription(getProjectScope());
-	}
-	// QuerySpecification createQuery(IErlElement element)
-	// throws JavaModelException {
-	// JavaSearchScopeFactory factory = JavaSearchScopeFactory.getInstance();
-	// JavaEditor editor = getEditor();
-	//
-	// IJavaSearchScope scope;
-	// String description;
-	// final boolean isInsideJRE = factory.isInsideJRE(element);
-	// if (editor != null) {
-	// scope = factory.createJavaProjectSearchScope(editor
-	// .getEditorInput(), isInsideJRE);
-	// description = factory.getProjectScopeDescription(editor
-	// .getEditorInput(), isInsideJRE);
-	// } else {
-	// scope = factory.createJavaProjectSearchScope(element
-	// .getJavaProject(), isInsideJRE);
-	// description = factory.getProjectScopeDescription(element
-	// .getJavaProject(), isInsideJRE);
-	// }
-	// return new ElementQuerySpecification(element, getLimitTo(), scope,
-	// description);
-	// }
+    @Override
+    protected String getScopeDescription() {
+        return SearchUtil.getProjectScopeDescription(getProjects());
+    }
+    // QuerySpecification createQuery(IErlElement element)
+    // throws JavaModelException {
+    // JavaSearchScopeFactory factory = JavaSearchScopeFactory.getInstance();
+    // JavaEditor editor = getEditor();
+    //
+    // IJavaSearchScope scope;
+    // String description;
+    // final boolean isInsideJRE = factory.isInsideJRE(element);
+    // if (editor != null) {
+    // scope = factory.createJavaProjectSearchScope(editor
+    // .getEditorInput(), isInsideJRE);
+    // description = factory.getProjectScopeDescription(editor
+    // .getEditorInput(), isInsideJRE);
+    // } else {
+    // scope = factory.createJavaProjectSearchScope(element
+    // .getJavaProject(), isInsideJRE);
+    // description = factory.getProjectScopeDescription(element
+    // .getJavaProject(), isInsideJRE);
+    // }
+    // return new ElementQuerySpecification(element, getLimitTo(), scope,
+    // description);
+    // }
 
 }

@@ -8,9 +8,9 @@ import org.erlide.tracing.core.mvc.view.NodeColumn;
 
 /**
  * Cell modifier for nodes table.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class NodeCellModifier implements ICellModifier {
 
@@ -18,20 +18,22 @@ public class NodeCellModifier implements ICellModifier {
 
     /**
      * Creates cell modifier for trace patterns table.
-     * 
+     *
      * @param tableViewer
      *            table viewer with which this cell modifier is used
      */
-    public NodeCellModifier(TableViewer tableViewer) {
+    public NodeCellModifier(final TableViewer tableViewer) {
         this.tableViewer = tableViewer;
     }
 
-    public boolean canModify(Object element, String property) {
+    @Override
+    public boolean canModify(final Object element, final String property) {
         return true;
     }
 
-    public Object getValue(Object element, String property) {
-        TracedNode node = (TracedNode) element;
+    @Override
+    public Object getValue(final Object element, final String property) {
+        final TracedNode node = (TracedNode) element;
         switch (NodeColumn.valueOf(property)) {
         case COOKIE:
             return node.getCookie();
@@ -44,8 +46,9 @@ public class NodeCellModifier implements ICellModifier {
         }
     }
 
-    public void modify(Object element, String property, Object value) {
-        TracedNode node = (TracedNode) ((TableItem) element).getData();
+    @Override
+    public void modify(final Object element, final String property, final Object value) {
+        final TracedNode node = (TracedNode) ((TableItem) element).getData();
         switch (NodeColumn.valueOf(property)) {
         case COOKIE:
             node.setCookie((String) value);
@@ -56,6 +59,7 @@ public class NodeCellModifier implements ICellModifier {
         case NODE_NAME:
             node.setNodeName((String) value);
             break;
+        default:
         }
         tableViewer.refresh();
     }

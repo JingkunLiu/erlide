@@ -8,10 +8,9 @@ import org.eclipse.jface.text.ITypedRegion;
 import org.eclipse.jface.text.Region;
 import org.eclipse.jface.text.hyperlink.AbstractHyperlinkDetector;
 import org.eclipse.jface.text.hyperlink.IHyperlink;
-import org.erlide.core.erlang.ErlToken;
-import org.erlide.core.erlang.IErlModule;
+import org.erlide.engine.services.parsing.ErlToken;
 import org.erlide.ui.actions.OpenAction;
-import org.erlide.ui.editors.erl.ErlangEditor;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 import org.erlide.ui.editors.erl.IErlangEditorActionDefinitionIds;
 
 public class ErlangHyperlinkDetector extends AbstractHyperlinkDetector {
@@ -19,6 +18,7 @@ public class ErlangHyperlinkDetector extends AbstractHyperlinkDetector {
     public ErlangHyperlinkDetector() {
     }
 
+    @Override
     public IHyperlink[] detectHyperlinks(final ITextViewer textViewer,
             final IRegion region, final boolean canShowMultipleHyperlinks) {
         if (region == null) {
@@ -32,26 +32,23 @@ public class ErlangHyperlinkDetector extends AbstractHyperlinkDetector {
     }
 
     private IHyperlink[] detectHyperlinks(final IDocument doc, final int offset) {
-        final ErlangEditor editor = (ErlangEditor) getAdapter(ErlangEditor.class);
-        final IErlModule module = editor.getModule();
-        if (module == null) {
+        final AbstractErlangEditor editor = (AbstractErlangEditor) getAdapter(AbstractErlangEditor.class);
+        if (editor == null) {
             return null;
         }
-        final ErlToken token = module.getScannerTokenAt(offset);
+        final ErlToken token = editor.getScanner().getTokenAt(offset);
         if (token == null) {
             return null;
         }
         final int tokenKind = token.getKind();
-        if (tokenKind != ErlToken.KIND_ATOM
-                && tokenKind != ErlToken.KIND_STRING
-                && tokenKind != ErlToken.KIND_MACRO
-                && tokenKind != ErlToken.KIND_VAR) {
+        if (tokenKind != ErlToken.KIND_ATOM && tokenKind != ErlToken.KIND_STRING
+                && tokenKind != ErlToken.KIND_MACRO && tokenKind != ErlToken.KIND_VAR) {
             return null;
         }
         try {
             final ITypedRegion partition = doc.getPartition(offset);
-            final ErlRegion region = new ErlRegion(token.getOffset(),
-                    token.getLength(), partition.getType());
+            final ErlRegion region = new ErlRegion(token.getOffset(), token.getLength(),
+                    partition.getType());
             if (!IDocument.DEFAULT_CONTENT_TYPE.equals(region.getType())) {
                 return null;
             }
@@ -80,23 +77,25 @@ public class ErlangHyperlinkDetector extends AbstractHyperlinkDetector {
     }
 
     private static class ErlangHyperlink implements IHyperlink {
-        private final ErlangEditor editor;
+        private final AbstractErlangEditor editor;
         private final ErlRegion region;
 
-        public ErlangHyperlink(final ErlangEditor editor,
-                final ErlRegion partion) {
+        public ErlangHyperlink(final AbstractErlangEditor editor, final ErlRegion partion) {
             this.editor = editor;
             region = partion;
         }
 
+        @Override
         public String getTypeLabel() {
             return null;
         }
 
+        @Override
         public String getHyperlinkText() {
             return null;
         }
 
+        @Override
         public void open() {
             final OpenAction action = (OpenAction) editor
                     .getAction(IErlangEditorActionDefinitionIds.OPEN);
@@ -105,6 +104,7 @@ public class ErlangHyperlinkDetector extends AbstractHyperlinkDetector {
             }
         }
 
+        @Override
         public IRegion getHyperlinkRegion() {
             return region;
         }

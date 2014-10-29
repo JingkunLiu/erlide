@@ -20,17 +20,17 @@ import org.eclipse.swt.graphics.Color;
  * <p>
  * This interface may be implemented by clients.
  * </p>
- * 
+ *
  */
 public interface IColorManager extends ISharedTextColors {
 
-	/**
-	 * Returns a color object for the given key. The color objects are
-	 * remembered internally; the same color object is returned for equal keys.
-	 * 
-	 * @param key
-	 *            the color key
-	 * @return the color object for the given key
-	 */
-	Color getColor(String key);
+    /**
+     * Returns a color object for the given key. The color objects are
+     * remembered internally; the same color object is returned for equal keys.
+     *
+     * @param key
+     *            the color key
+     * @return the color object for the given key
+     */
+    Color getColor(String key);
 }

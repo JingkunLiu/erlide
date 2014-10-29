@@ -40,14 +40,14 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.Text;
-import org.erlide.core.ErlangPlugin;
-import org.erlide.core.erlang.ErlModelException;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlProject;
-import org.erlide.jinterface.util.ErlLogger;
-import org.erlide.runtime.debug.ErlDebugConstants;
-import org.erlide.runtime.launch.ErlLaunchAttributes;
+import org.erlide.backend.api.ErlRuntimeAttributes;
+import org.erlide.core.ErlangCore;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.root.IErlProject;
+import org.erlide.runtime.api.ErlDebugFlags;
 import org.erlide.ui.util.SWTUtil;
+import org.erlide.util.ErlLogger;
 
 public class ErlangMainTab extends AbstractLaunchConfigurationTab {
 
@@ -59,6 +59,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
     /**
      * @wbp.parser.entryPoint
      */
+    @Override
     public void createControl(final Composite parent) {
         final Composite comp = new Composite(parent, SWT.NONE);
         setControl(comp);
@@ -70,7 +71,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
 
         Collection<IErlProject> projects;
         try {
-            projects = ErlangCore.getModel().getErlangProjects();
+            projects = ErlangEngine.getInstance().getModel().getErlangProjects();
             final List<String> ps = new ArrayList<String>();
             for (final IErlProject p : projects) {
                 ps.add(p.getName());
@@ -98,6 +99,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
         gd_table_1.minimumWidth = 256;
         table_1.setLayoutData(gd_table_1);
         projectsTable.addCheckStateListener(new ICheckStateListener() {
+            @Override
             @SuppressWarnings("synthetic-access")
             public void checkStateChanged(final CheckStateChangedEvent event) {
                 updateLaunchConfigurationDialog();
@@ -111,30 +113,25 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
     private void createStartGroup(final Composite comp) {
         final Group startGroup = new Group(comp, SWT.NONE);
         startGroup.setText("Start");
-        final GridData gd_startGroup = new GridData(SWT.FILL, SWT.CENTER,
-                false, false);
+        final GridData gd_startGroup = new GridData(SWT.FILL, SWT.CENTER, false, false);
         startGroup.setLayoutData(gd_startGroup);
         final GridLayout gridLayout_1 = new GridLayout();
         gridLayout_1.numColumns = 4;
         startGroup.setLayout(gridLayout_1);
 
-        moduleText = textWithLabel(startGroup, "Module", 114,
-                fBasicModifyListener);
-        funcText = textWithLabel(startGroup, "Function", 107,
-                fBasicModifyListener);
-        argsText = textWithLabel(startGroup, "Arguments", 3,
-                fBasicModifyListener);
+        moduleText = textWithLabel(startGroup, "Module", 114, fBasicModifyListener);
+        funcText = textWithLabel(startGroup, "Function", 107, fBasicModifyListener);
+        argsText = textWithLabel(startGroup, "Arguments", 3, fBasicModifyListener);
 
         new Label(startGroup, SWT.NONE);
 
         final Label infoLabel = new Label(startGroup, SWT.NONE);
-        final GridData gd_infoLabel = new GridData(SWT.LEFT, SWT.CENTER, false,
-                false, 3, 1);
+        final GridData gd_infoLabel = new GridData(SWT.LEFT, SWT.CENTER, false, false, 3,
+                1);
         infoLabel.setLayoutData(gd_infoLabel);
-        infoLabel
-                .setText("Start function takes no arguments or a single string.\n"
-                        + "It's similar to using '-s mod fun args' on the command line.\n"
-                        + "Use it for system initialization/startup.");
+        infoLabel.setText("Start function takes no arguments or a single string.\n"
+                + "It's similar to using '-s mod fun args' on the command line.\n"
+                + "Use it for system initialization/startup.");
     }
 
     private Text textWithLabel(final Group startGroup, final String labelText,
@@ -146,8 +143,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
         final Text text = new Text(startGroup, SWT.SINGLE | SWT.BORDER);
         final GridData gd;
         if (textWidthHint < 10) {
-            gd = new GridData(SWT.FILL, SWT.CENTER, false, false,
-                    textWidthHint, 1);
+            gd = new GridData(SWT.FILL, SWT.CENTER, false, false, textWidthHint, 1);
         } else {
             gd = new GridData(SWT.FILL, SWT.CENTER, false, false);
             gd.widthHint = textWidthHint;
@@ -163,16 +159,17 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
      */
     static class ProjectsContentProvider implements IStructuredContentProvider {
 
+        @Override
         public Object[] getElements(final Object inputElement) {
             final java.util.List<String> ps = new ArrayList<String>();
 
-            final IProject[] projects = ResourcesPlugin.getWorkspace()
-                    .getRoot().getProjects();
+            final IProject[] projects = ResourcesPlugin.getWorkspace().getRoot()
+                    .getProjects();
             for (final IProject p : projects) {
                 if (p.isAccessible()) {
                     IProjectNature n = null;
                     try {
-                        n = p.getNature(ErlangPlugin.NATURE_ID);
+                        n = p.getNature(ErlangCore.NATURE_ID);
                         if (n != null) {
                             ps.add(p.getName());
                         }
@@ -180,12 +177,14 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
                     }
                 }
             }
-            return ps.toArray(new String[0]);
+            return ps.toArray(new String[ps.size()]);
         }
 
+        @Override
         public void dispose() {
         }
 
+        @Override
         public void inputChanged(final Viewer viewer, final Object oldInput,
                 final Object newInput) {
         }
@@ -194,13 +193,15 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
 
     /**
      * Provides the labels for the projects table
-     * 
+     *
      */
     static class ProjectsLabelProvider implements ITableLabelProvider {
+        @Override
         public Image getColumnImage(final Object element, final int columnIndex) {
             return null;
         }
 
+        @Override
         public String getColumnText(final Object element, final int columnIndex) {
             if (element instanceof String) {
                 return (String) element;
@@ -208,35 +209,40 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
             return "?" + element;
         }
 
+        @Override
         public void addListener(final ILabelProviderListener listener) {
         }
 
+        @Override
         public void dispose() {
         }
 
-        public boolean isLabelProperty(final Object element,
-                final String property) {
+        @Override
+        public boolean isLabelProperty(final Object element, final String property) {
             return false;
         }
 
+        @Override
         public void removeListener(final ILabelProviderListener listener) {
         }
     }
 
+    @Override
     public void setDefaults(final ILaunchConfigurationWorkingCopy config) {
-        config.setAttribute(ErlLaunchAttributes.PROJECTS, "");
-        config.setAttribute(ErlLaunchAttributes.MODULE, "");
-        config.setAttribute(ErlLaunchAttributes.FUNCTION, "");
-        config.setAttribute(ErlLaunchAttributes.ARGUMENTS, "");
-        config.setAttribute(ErlLaunchAttributes.DEBUG_FLAGS,
-                ErlDebugConstants.DEFAULT_DEBUG_FLAGS);
+        config.setAttribute(ErlRuntimeAttributes.PROJECTS, "");
+        config.setAttribute(ErlRuntimeAttributes.MODULE, "");
+        config.setAttribute(ErlRuntimeAttributes.FUNCTION, "");
+        config.setAttribute(ErlRuntimeAttributes.ARGUMENTS, "");
+        config.setAttribute(ErlRuntimeAttributes.DEBUG_FLAGS,
+                ErlDebugFlags.getFlag(ErlDebugFlags.DEFAULT_DEBUG_FLAGS));
     }
 
+    @Override
     public void initializeFrom(final ILaunchConfiguration config) {
         projectsTable.setInput(config);
         String projs;
         try {
-            projs = config.getAttribute(ErlLaunchAttributes.PROJECTS, "");
+            projs = config.getAttribute(ErlRuntimeAttributes.PROJECTS, "");
         } catch (final CoreException e1) {
             projs = "";
         }
@@ -257,22 +263,21 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
         }
 
         try {
-            final String attribute = config.getAttribute(
-                    ErlLaunchAttributes.MODULE, "");
+            final String attribute = config.getAttribute(ErlRuntimeAttributes.MODULE, "");
             moduleText.setText(attribute);
         } catch (final CoreException e) {
             moduleText.setText("");
         }
         try {
-            final String attribute = config.getAttribute(
-                    ErlLaunchAttributes.FUNCTION, "");
+            final String attribute = config.getAttribute(ErlRuntimeAttributes.FUNCTION,
+                    "");
             funcText.setText(attribute);
         } catch (final CoreException e) {
             funcText.setText("");
         }
         try {
-            final String attribute = config.getAttribute(
-                    ErlLaunchAttributes.ARGUMENTS, "");
+            final String attribute = config.getAttribute(ErlRuntimeAttributes.ARGUMENTS,
+                    "");
             argsText.setText(attribute);
         } catch (final CoreException e) {
             argsText.setText("");
@@ -281,6 +286,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
         updateLaunchConfigurationDialog();
     }
 
+    @Override
     public void performApply(final ILaunchConfigurationWorkingCopy config) {
         final List<IProject> projects = getSelectedProjects();
         final StringBuilder projectNames = new StringBuilder();
@@ -290,12 +296,11 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
         if (projectNames.length() > 0) {
             projectNames.setLength(projectNames.length() - 1);
         }
-        config.setAttribute(ErlLaunchAttributes.PROJECTS,
-                projectNames.toString());
+        config.setAttribute(ErlRuntimeAttributes.PROJECTS, projectNames.toString());
 
-        config.setAttribute(ErlLaunchAttributes.MODULE, moduleText.getText());
-        config.setAttribute(ErlLaunchAttributes.FUNCTION, funcText.getText());
-        config.setAttribute(ErlLaunchAttributes.ARGUMENTS, argsText.getText());
+        config.setAttribute(ErlRuntimeAttributes.MODULE, moduleText.getText());
+        config.setAttribute(ErlRuntimeAttributes.FUNCTION, funcText.getText());
+        config.setAttribute(ErlRuntimeAttributes.ARGUMENTS, argsText.getText());
     }
 
     public List<IProject> getSelectedProjects() {
@@ -309,6 +314,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
         return result;
     }
 
+    @Override
     public String getName() {
         return "Erlang";
     }
@@ -322,6 +328,7 @@ public class ErlangMainTab extends AbstractLaunchConfigurationTab {
     }
 
     private final ModifyListener fBasicModifyListener = new ModifyListener() {
+        @Override
         @SuppressWarnings("synthetic-access")
         public void modifyText(final ModifyEvent evt) {
             updateLaunchConfigurationDialog();

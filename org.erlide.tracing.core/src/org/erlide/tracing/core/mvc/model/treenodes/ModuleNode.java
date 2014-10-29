@@ -5,9 +5,9 @@ import org.erlide.tracing.core.Images;
 
 /**
  * Node representing module in treeviewer.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class ModuleNode extends TreeNode {
 
@@ -15,11 +15,11 @@ public class ModuleNode extends TreeNode {
 
     /**
      * Creates new node.
-     * 
+     *
      * @param moduleName
      *            module name
      */
-    public ModuleNode(String moduleName) {
+    public ModuleNode(final String moduleName) {
         this.moduleName = moduleName;
         setImage(Activator.getImage(Images.INFO_NODE));
     }

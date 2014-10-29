@@ -21,19 +21,20 @@ package com.ericsson.otp.erlang;
 /**
  * Base class for the other OTP exception classes.
  */
-@SuppressWarnings("serial")
 public abstract class OtpException extends Exception {
-	/**
-	 * Provides no message.
-	 */
-	public OtpException() {
-		super();
-	}
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * Provides a detailed message.
-	 */
-	public OtpException(final String msg) {
-		super(msg);
-	}
+    /**
+     * Provides no message.
+     */
+    public OtpException() {
+	super();
+    }
+
+    /**
+     * Provides a detailed message.
+     */
+    public OtpException(final String msg) {
+	super(msg);
+    }
 }

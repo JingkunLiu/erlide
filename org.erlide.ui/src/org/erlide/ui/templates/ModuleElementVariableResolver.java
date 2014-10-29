@@ -1,9 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2004 Lukas Larsson and others.
- * All rights reserved. This program and the accompanying materials 
+ * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Lukas Larsson
  *******************************************************************************/
@@ -22,41 +22,30 @@ import org.eclipse.jface.text.templates.TemplateVariableResolver;
 
 public class ModuleElementVariableResolver extends TemplateVariableResolver {
 
-	private final Template fTemplate;
-	private boolean reentry = false;
+    private final Template fTemplate;
+    private boolean reentry = false;
 
-	public ModuleElementVariableResolver(final String type,
-			final Template template) {
-		super(type, "");
-		fTemplate = template;
-	}
+    public ModuleElementVariableResolver(final String type, final Template template) {
+        super(type, "");
+        fTemplate = template;
+    }
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.jface.text.templates.TemplateVariableResolver#resolve(org
-	 * .eclipse.jface.text.templates.TemplateVariable,
-	 * org.eclipse.jface.text.templates.TemplateContext)
-	 */
-	@Override
-	public void resolve(final TemplateVariable variable,
-			final TemplateContext theContext) {
-		if (reentry) {
-			return;
-		}
-		reentry = true;
-		final DocumentTemplateContext context = new DocumentTemplateContext(
-				ErlangSourceContextTypeModule.getDefault(), new Document(
-						fTemplate.getPattern()), 0, fTemplate.getPattern()
-						.length());
-		TemplateBuffer tb;
-		try {
-			tb = context.evaluate(fTemplate);
-			variable.setValue(tb.getString());
-		} catch (final BadLocationException e) {
-		} catch (final TemplateException e) {
-		}
-		reentry = false;
-	}
+    @Override
+    public void resolve(final TemplateVariable variable, final TemplateContext theContext) {
+        if (reentry) {
+            return;
+        }
+        reentry = true;
+        final DocumentTemplateContext context = new DocumentTemplateContext(
+                ErlangSourceContextTypeModule.getDefault(), new Document(
+                        fTemplate.getPattern()), 0, fTemplate.getPattern().length());
+        TemplateBuffer tb;
+        try {
+            tb = context.evaluate(fTemplate);
+            variable.setValue(tb.getString());
+        } catch (final BadLocationException e) {
+        } catch (final TemplateException e) {
+        }
+        reentry = false;
+    }
 }

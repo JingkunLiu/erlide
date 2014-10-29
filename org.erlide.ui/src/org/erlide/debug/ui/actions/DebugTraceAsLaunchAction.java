@@ -10,32 +10,33 @@ import org.eclipse.ui.IViewPart;
 import org.erlide.debug.ui.tracing.DebugTraceLaunching;
 import org.erlide.debug.ui.views.DebuggerTraceView;
 
-public class DebugTraceAsLaunchAction extends Action implements
-		IViewActionDelegate {
+public class DebugTraceAsLaunchAction extends Action implements IViewActionDelegate {
 
-	private IDebugTarget fTarget;
-	private DebuggerTraceView fView;
+    private IDebugTarget fTarget;
+    private DebuggerTraceView fView;
 
-	public void init(final IViewPart view) {
-		fView = (DebuggerTraceView) view;
-	}
+    @Override
+    public void init(final IViewPart view) {
+        fView = (DebuggerTraceView) view;
+    }
 
-	public void run(final IAction action) {
-		DebugTraceLaunching.launch(fTarget, fView);
-	}
+    @Override
+    public void run(final IAction action) {
+        DebugTraceLaunching.launch(fTarget, fView);
+    }
 
-	public void selectionChanged(final IAction action,
-			final ISelection selection) {
-		fTarget = null;
-		if (selection instanceof IStructuredSelection) {
-			final IStructuredSelection ss = (IStructuredSelection) selection;
-			for (final Object o : ss.toArray()) {
-				if (o instanceof IDebugTarget) {
-					final IDebugTarget target = (IDebugTarget) o;
-					fTarget = target;
-					break;
-				}
-			}
-		}
-	}
+    @Override
+    public void selectionChanged(final IAction action, final ISelection selection) {
+        fTarget = null;
+        if (selection instanceof IStructuredSelection) {
+            final IStructuredSelection ss = (IStructuredSelection) selection;
+            for (final Object o : ss.toArray()) {
+                if (o instanceof IDebugTarget) {
+                    final IDebugTarget target = (IDebugTarget) o;
+                    fTarget = target;
+                    break;
+                }
+            }
+        }
+    }
 }

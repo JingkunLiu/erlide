@@ -24,12 +24,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.PropertyPage;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.jinterface.util.ErlLogger;
-import org.erlide.ui.ErlideUIPlugin;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.services.search.OtpDocService;
 import org.erlide.ui.editors.erl.IErlangHelpContextIds;
-
-import erlang.ErlideDoc;
+import org.erlide.ui.internal.ErlideUIPlugin;
+import org.erlide.util.ErlLogger;
 
 /**
  * Property page used to set the project's edoc location
@@ -50,8 +49,7 @@ public class EdocConfigurationPropertyPage extends PropertyPage implements
 
     @Override
     protected IPreferenceStore doGetPreferenceStore() {
-        final IPreferenceStore store = ErlideUIPlugin.getDefault()
-                .getPreferenceStore();
+        final IPreferenceStore store = ErlideUIPlugin.getDefault().getPreferenceStore();
         store.addPropertyChangeListener(this);
         return store;
     }
@@ -63,8 +61,11 @@ public class EdocConfigurationPropertyPage extends PropertyPage implements
     public void createControl(final Composite parent) {
         super.createControl(parent);
         setDescription("Specify the location of the generated edoc (in HTML format).");
-        PlatformUI.getWorkbench().getHelpSystem().setHelp(getControl(),
-                IErlangHelpContextIds.EDOC_CONFIGURATION_PROPERTY_PAGE);
+        PlatformUI
+                .getWorkbench()
+                .getHelpSystem()
+                .setHelp(getControl(),
+                        IErlangHelpContextIds.EDOC_CONFIGURATION_PROPERTY_PAGE);
     }
 
     /*
@@ -73,8 +74,9 @@ public class EdocConfigurationPropertyPage extends PropertyPage implements
     @Override
     protected Control createContents(final Composite parent) {
         fInitialLocation = null;
-        final String s = ErlideDoc.getOtpDocLocation(ErlangCore
-                .getBackendManager().getIdeBackend());
+        // TODO must use the project's backend
+        final String s = ErlangEngine.getInstance().getService(OtpDocService.class)
+                .getOtpDocLocation(null);
         try {
             fInitialLocation = new URL("file", null, s);
         } catch (final MalformedURLException e) {
@@ -105,9 +107,11 @@ public class EdocConfigurationPropertyPage extends PropertyPage implements
         return true;
     }
 
+    @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
     }
 
+    @Override
     public void propertyChange(final PropertyChangeEvent event) {
     }
 

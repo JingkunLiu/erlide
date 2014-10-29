@@ -9,51 +9,57 @@ import org.erlide.tracing.core.mvc.model.treenodes.ITreeNode;
 
 /**
  * Content provider for tree.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
-public class TreeContentProvider implements /* ILazyTreeContentProvider */ITreeContentProvider {
+public class TreeContentProvider implements
+/* ILazyTreeContentProvider */ITreeContentProvider {
 
-    private final TreeViewer treeViewer;
     private Collection<ITreeNode> list;
     private final boolean hasChildrenValue;
 
     /**
      * Creates content provider.
-     * 
+     *
      * @param treeViewer
      *            tree viewer that will be using this content provider
      * @param hasChildrenValue
      *            value which should be returned when
      *            {@link #hasChildren(Object)} is called
      */
-    public TreeContentProvider(TreeViewer treeViewer, boolean hasChildrenValue) {
-        this.treeViewer = treeViewer;
+    public TreeContentProvider(final TreeViewer treeViewer, final boolean hasChildrenValue) {
         this.hasChildrenValue = hasChildrenValue;
     }
 
+    @Override
     public void dispose() {
     }
 
+    @Override
     @SuppressWarnings("unchecked")
-    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+    public void inputChanged(final Viewer viewer, final Object oldInput,
+            final Object newInput) {
         list = (Collection<ITreeNode>) newInput;
     }
 
-    public Object[] getChildren(Object element) {
+    @Override
+    public Object[] getChildren(final Object element) {
         return ((ITreeNode) element).getChildren().toArray();
     }
 
-    public Object[] getElements(Object element) {
+    @Override
+    public Object[] getElements(final Object element) {
         return list.toArray();
     }
 
-    public Object getParent(Object element) {
+    @Override
+    public Object getParent(final Object element) {
         return ((ITreeNode) element).getParent();
     }
 
-    public boolean hasChildren(Object element) {
+    @Override
+    public boolean hasChildren(final Object element) {
         // return ((ITreeNode) element).hasChildren();
         // for optimization purposes always return true
         return hasChildrenValue;

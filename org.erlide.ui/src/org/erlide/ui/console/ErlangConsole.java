@@ -13,96 +13,103 @@ package org.erlide.ui.console;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.console.IConsoleConstants;
 import org.eclipse.ui.console.IConsoleDocumentPartitioner;
 import org.eclipse.ui.console.IConsoleView;
 import org.eclipse.ui.console.TextConsole;
 import org.eclipse.ui.part.IPageBookViewPage;
-import org.erlide.jinterface.backend.Backend;
-import org.erlide.jinterface.backend.BackendShell;
-import org.erlide.runtime.backend.ErlideBackend;
+import org.erlide.backend.api.IBackend;
+import org.erlide.runtime.shell.IBackendShell;
+import org.erlide.ui.internal.ErlideUIPlugin;
 
-public class ErlangConsole extends TextConsole {
-	private final BackendShell shell;
-	protected ListenerList consoleListeners;
-	protected ErlangConsolePartitioner partitioner;
-	private boolean stopped = false;
+public class ErlangConsole extends TextConsole implements IErlangConsole {
+    private final IBackendShell shell;
+    protected ListenerList consoleListeners;
+    protected ErlangConsolePartitioner partitioner;
+    private boolean stopped = false;
+    private final IBackend backend;
 
-	public ErlangConsole(ErlideBackend backend) {
-		super(backend.getName(), null, null, true);
-		shell = backend.getShell("main");
-		this.consoleListeners = new ListenerList(ListenerList.IDENTITY);
+    public ErlangConsole(final IBackend backend) {
+        super(backend.getName(), null, null, true);
+        this.backend = backend;
 
-		partitioner = new ErlangConsolePartitioner();
-		getDocument().setDocumentPartitioner(partitioner);
-		partitioner.connect(getDocument());
-	}
+        shell = backend.getShell("main");
+        consoleListeners = new ListenerList(ListenerList.IDENTITY);
 
-	@Override
-	public IPageBookViewPage createPage(IConsoleView view) {
-		return new ErlangConsolePage(view, this);
-	}
+        partitioner = new ErlangConsolePartitioner();
+        getDocument().setDocumentPartitioner(partitioner);
+        partitioner.connect(getDocument());
+    }
 
-	public Backend getBackend() {
-		return shell.getBackend();
-	}
+    @Override
+    public IPageBookViewPage createPage(final IConsoleView view) {
+        final ErlangConsolePage erlangConsolePage = new ErlangConsolePage(view, this,
+                backend);
+        ErlideUIPlugin.getDefault().getErlConsoleManager()
+                .addPage(this, erlangConsolePage);
+        return erlangConsolePage;
+    }
 
-	public BackendShell getShell() {
-		return shell;
-	}
+    @Override
+    public IBackend getBackend() {
+        return backend;
+    }
 
-	@Override
-	public ImageDescriptor getImageDescriptor() {
-		return null;
-	}
+    @Override
+    public IBackendShell getShell() {
+        return shell;
+    }
 
-	@Override
-	public String getName() {
-		return "Erlang: " + shell.getBackend().getInfo().toString() + " "
-				+ shell.hashCode();
-	}
+    @Override
+    public ImageDescriptor getImageDescriptor() {
+        return null;
+    }
 
-	@Override
-	public String getType() {
-		return null;
-	}
+    @Override
+    public String getName() {
+        String name = "Erlang: " + backend.getName();
+        if (backend.isDebugging()) {
+            name = name + " (debug)";
+        }
+        return name;
+    }
 
-	@Override
-	public void addPropertyChangeListener(IPropertyChangeListener listener) {
-	}
+    @Override
+    public String getType() {
+        return null;
+    }
 
-	@Override
-	public void removePropertyChangeListener(IPropertyChangeListener listener) {
-	}
+    @Override
+    public void addPropertyChangeListener(final IPropertyChangeListener listener) {
+    }
 
-	public void show() {
-		IWorkbenchPage page = PlatformUI.getWorkbench()
-				.getActiveWorkbenchWindow().getActivePage();
-		String id = IConsoleConstants.ID_CONSOLE_VIEW;
-		IConsoleView view;
-		try {
-			view = (IConsoleView) page.showView(id);
-			view.display(this);
-		} catch (PartInitException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+    @Override
+    public void removePropertyChangeListener(final IPropertyChangeListener listener) {
+    }
 
-	@Override
-	protected IConsoleDocumentPartitioner getPartitioner() {
-		return partitioner;
-	}
+    // public void show() {
+    // final IWorkbenchPage page = PlatformUI.getWorkbench()
+    // .getActiveWorkbenchWindow().getActivePage();
+    // final String id = IConsoleConstants.ID_CONSOLE_VIEW;
+    // IConsoleView view;
+    // try {
+    // view = (IConsoleView) page.showView(id);
+    // view.display(this);
+    // } catch (final PartInitException e) {
+    // ErlLogger.error(e);
+    // }
+    // }
 
-	public void stop() {
-		stopped  = true;
-	}
+    @Override
+    protected IConsoleDocumentPartitioner getPartitioner() {
+        return partitioner;
+    }
 
-	public boolean isStopped() {
-		return stopped;
-	}
+    public void stop() {
+        stopped = true;
+    }
+
+    public boolean isStopped() {
+        return stopped;
+    }
 
 }

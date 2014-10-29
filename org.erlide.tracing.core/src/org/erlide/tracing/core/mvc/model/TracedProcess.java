@@ -10,9 +10,9 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
 
 /**
  * Traced process.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class TracedProcess {
 
@@ -32,22 +32,22 @@ public class TracedProcess {
     /**
      * Creates process from tuple. List of tuples describing all processes is
      * returned as a result of <code>erlide_proclist:process_list/0</code> call.
-     * 
+     *
      * @param tuple
      *            tuple describing process
      */
-    public TracedProcess(OtpErlangTuple tuple) {
-        this.name = tuple.elementAt(NAME).toString();
-        this.pid = (OtpErlangPid) tuple.elementAt(PID);
-        this.initialCall = tuple.elementAt(INITIAL_CALL).toString();
-        this.node = tuple.elementAt(NODE_NAME).toString();
+    public TracedProcess(final OtpErlangTuple tuple) {
+        name = tuple.elementAt(NAME).toString();
+        pid = (OtpErlangPid) tuple.elementAt(PID);
+        initialCall = tuple.elementAt(INITIAL_CALL).toString();
+        node = tuple.elementAt(NODE_NAME).toString();
     }
 
     public boolean isSelected() {
         return selected;
     }
 
-    public void setSelected(boolean selected) {
+    public void setSelected(final boolean selected) {
         this.selected = selected;
     }
 
@@ -67,15 +67,15 @@ public class TracedProcess {
         return node;
     }
 
-    public void setFlag(ProcessFlag flag) {
+    public void setFlag(final ProcessFlag flag) {
         flags.add(flag);
     }
 
-    public void unSetFlag(ProcessFlag flag) {
+    public void unSetFlag(final ProcessFlag flag) {
         flags.remove(flag);
     }
 
-    public boolean hasFlag(ProcessFlag flag) {
+    public boolean hasFlag(final ProcessFlag flag) {
         return flags.contains(flag);
     }
 

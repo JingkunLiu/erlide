@@ -7,9 +7,9 @@ import org.eclipse.swt.graphics.Image;
 
 /**
  * Tree node displayed in treeviewer.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class TreeNode implements ITreeNode {
 
@@ -22,53 +22,63 @@ public class TreeNode implements ITreeNode {
         this(null, null);
     }
 
-    public TreeNode(String label) {
+    public TreeNode(final String label) {
         this(label, null);
     }
 
-    public TreeNode(String label, Image image) {
+    public TreeNode(final String label, final Image image) {
         this.label = label;
         this.image = image;
     }
 
+    @Override
     public ITreeNode getParent() {
         return parent;
     }
 
-    public void setParent(ITreeNode parent) {
+    @Override
+    public void setParent(final ITreeNode parent) {
         this.parent = parent;
     }
 
+    @Override
     public String getLabel() {
         return label;
     }
 
+    @Override
     public boolean hasChildren() {
         return children.size() > 0;
     }
 
+    @Override
     public List<ITreeNode> getChildren() {
         return children;
     }
 
-    public void addChildren(ITreeNode... childrenList) {
-        for (ITreeNode child : childrenList) {
+    @Override
+    public void addChildren(final ITreeNode... childrenList) {
+        for (final ITreeNode child : childrenList) {
             children.add(child);
         }
     }
 
-    public void removeChild(ITreeNode child) {
+    @Override
+    public void removeChild(final ITreeNode child) {
         children.remove(child);
     }
 
-    public void setLabel(String label) {
+    @Override
+    public void setLabel(final String label) {
         this.label = label;
     }
 
-    public void setImage(Image image) {
+    @Override
+    public void setImage(final Image image) {
         this.image = image;
     }
 
+    @Override
     public Image getImage() {
         return image;
     }

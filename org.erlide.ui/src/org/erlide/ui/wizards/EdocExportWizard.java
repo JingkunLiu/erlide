@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2009 * and others.
+ * Copyright (c) 2009-2013 Vlad Dumitrescu and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available
  * at http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *     *
+ *     Vlad Dumitrescu
  *******************************************************************************/
 package org.erlide.ui.wizards;
 
@@ -27,15 +27,12 @@ import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.ide.IDE;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlProject;
-import org.erlide.core.erlang.IOldErlangProjectProperties;
-import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.root.IErlProject;
+import org.erlide.util.ErlLogger;
 
 import com.ericsson.otp.erlang.OtpErlangObject;
 import com.ericsson.otp.erlang.OtpErlangString;
-
-import erlang.ErlideEdocExport;
 
 public class EdocExportWizard extends Wizard implements IExportWizard {
 
@@ -50,33 +47,32 @@ public class EdocExportWizard extends Wizard implements IExportWizard {
 
         final Collection<IProject> projects = page.getSelectedResources();
         final Map<String, OtpErlangObject> options = page.getOptions();
-        for (final IProject prj : projects) {
-            if (!prj.isAccessible()) {
-                ErlLogger.debug("EDOC: " + prj.getName()
+        for (final IProject project : projects) {
+            if (!project.isAccessible()) {
+                ErlLogger.debug("EDOC: " + project.getName()
                         + " is not accessible, skipping.");
                 continue;
             }
-            ErlLogger.debug("EDOC: " + prj.getName());
+            ErlLogger.debug("EDOC: " + project.getName());
             try {
-                final IFolder dest = prj.getFolder(page.getDestination());
+                final IFolder dest = project.getFolder(page.getDestination());
                 if (!dest.exists()) {
                     dest.create(true, true, null);
                 }
-                options.put("dir", new OtpErlangString(dest.getLocation()
-                        .toString()));
+                options.put("dir", new OtpErlangString(dest.getLocation().toString()));
                 final List<String> files = new ArrayList<String>();
-                IErlProject eprj = ErlangCore.getModel().findProject(prj);
-                final IOldErlangProjectProperties props = eprj.getProperties();
-                for (final IPath dir : props.getSourceDirs()) {
-                    final IFolder folder = prj.getFolder(dir);
+                final IErlProject erlProject = ErlangEngine.getInstance().getModel()
+                        .findProject(project);
+                for (final IPath dir : erlProject.getProperties().getSourceDirs()) {
+                    final IFolder folder = project.getFolder(dir);
                     if (folder.isAccessible()) {
                         folder.accept(new IResourceVisitor() {
+                            @Override
                             public boolean visit(final IResource resource)
                                     throws CoreException {
                                 if ("erl".equals(resource.getFileExtension())) {
                                     if (resource.isAccessible()) {
-                                        files.add(resource.getLocation()
-                                                .toString());
+                                        files.add(resource.getLocation().toString());
                                     }
                                 }
                                 return true;
@@ -85,7 +81,8 @@ public class EdocExportWizard extends Wizard implements IExportWizard {
                     }
                 }
                 try {
-                    ErlideEdocExport.files(files, options);
+                    ErlangEngine.getInstance().getEdocExportService()
+                            .files(files, options);
                 } catch (final Exception e) {
                     ErlLogger.warn(e);
                 }
@@ -97,14 +94,13 @@ public class EdocExportWizard extends Wizard implements IExportWizard {
         return true;
     }
 
-    public void init(final IWorkbench workbench,
-            final IStructuredSelection aSelection) {
-        this.selection = aSelection;
+    @Override
+    public void init(final IWorkbench workbench, final IStructuredSelection aSelection) {
+        selection = aSelection;
 
-        final List<?> selectedResources = IDE
-                .computeSelectedResources(aSelection);
+        final List<?> selectedResources = IDE.computeSelectedResources(aSelection);
         if (!selectedResources.isEmpty()) {
-            this.selection = new StructuredSelection(selectedResources);
+            selection = new StructuredSelection(selectedResources);
         }
         setWindowTitle("eDoc Export Wizard"); // NON-NLS-1
         setNeedsProgressMonitor(true);

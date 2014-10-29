@@ -11,14 +11,15 @@ import org.eclipse.debug.core.model.IDebugTarget;
 import org.eclipse.debug.core.model.IMemoryBlock;
 import org.eclipse.debug.core.model.IProcess;
 import org.eclipse.debug.core.model.IThread;
-import org.erlide.runtime.debug.DummyProcess;
 
 import com.ericsson.otp.erlang.OtpErlangPid;
 
 public class DebugTraceTarget extends DebugTraceElement implements IDebugTarget {
 
     private final ILaunch launch;
+    @SuppressWarnings("unused")
     private final ILaunch parentLaunch;
+    @SuppressWarnings("unused")
     private final IDebugTarget node;
     private final List<DebugTraceProcess> processes;
     private final List<DebugTraceEvent> events;
@@ -63,10 +64,12 @@ public class DebugTraceTarget extends DebugTraceElement implements IDebugTarget 
         return events.get(pointer);
     }
 
+    @Override
     public String getName() throws DebugException {
         return launch.toString();
     }
 
+    @Override
     public IProcess getProcess() {
         if (fDummyProcess == null) {
             fDummyProcess = new DummyProcess(getLaunch());
@@ -74,14 +77,17 @@ public class DebugTraceTarget extends DebugTraceElement implements IDebugTarget 
         return fDummyProcess;
     }
 
+    @Override
     public IThread[] getThreads() throws DebugException {
         return processes.toArray(new IThread[processes.size()]);
     }
 
+    @Override
     public boolean hasThreads() throws DebugException {
         return !processes.isEmpty();
     }
 
+    @Override
     public boolean supportsBreakpoint(final IBreakpoint breakpoint) {
         return false;
     }
@@ -96,63 +102,77 @@ public class DebugTraceTarget extends DebugTraceElement implements IDebugTarget 
         return launch;
     }
 
+    @Override
     public boolean canTerminate() {
         return true;
     }
 
+    @Override
     public boolean isTerminated() {
         return fTerminated;
     }
 
+    @Override
     public void terminate() throws DebugException {
         fTerminated = true;
     }
 
+    @Override
     public boolean canResume() {
         return true;
     }
 
+    @Override
     public boolean canSuspend() {
         return true;
     }
 
+    @Override
     public boolean isSuspended() {
         return true;
     }
 
+    @Override
     public void resume() throws DebugException {
     }
 
+    @Override
     public void suspend() throws DebugException {
     }
 
+    @Override
     public void breakpointAdded(final IBreakpoint breakpoint) {
     }
 
-    public void breakpointChanged(final IBreakpoint breakpoint,
-            final IMarkerDelta delta) {
+    @Override
+    public void breakpointChanged(final IBreakpoint breakpoint, final IMarkerDelta delta) {
     }
 
-    public void breakpointRemoved(final IBreakpoint breakpoint,
-            final IMarkerDelta delta) {
+    @Override
+    public void breakpointRemoved(final IBreakpoint breakpoint, final IMarkerDelta delta) {
     }
 
+    @Override
     public boolean canDisconnect() {
         return false;
     }
 
+    @Override
     public void disconnect() throws DebugException {
     }
 
+    @Override
     public boolean isDisconnected() {
         return false;
     }
 
-    public IMemoryBlock getMemoryBlock(final long startAddress,
-            final long length) throws DebugException {
+    @Override
+    public IMemoryBlock getMemoryBlock(final long startAddress, final long length)
+            throws DebugException {
         return null;
     }
 
+    @Override
     public boolean supportsStorageRetrieval() {
         return false;
     }

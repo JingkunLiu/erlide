@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     György Orosz - initial API and implementation
  ******************************************************************************/
@@ -18,40 +18,43 @@ import com.ericsson.otp.erlang.OtpErlangObject;
 
 /**
  * Abstract class for common functions used by duplicates parsers
- * 
+ *
  * @author Gyorgy Orosz
- * 
+ *
  */
 public abstract class AbstractDuplicatesParser implements IResultParser {
 
-	protected String errorMessage;
-	protected boolean isSuccessful;
-	protected List<DuplicatedCodeElement> duplicates;
+    protected String errorMessage;
+    protected boolean isSuccessful;
+    protected List<DuplicatedCodeElement> duplicates;
 
-	/**
-	 * Constructor
-	 * 
-	 * @param obj
-	 *            object to be parsed
-	 */
-	public AbstractDuplicatesParser(OtpErlangObject obj) {
-		parse(obj);
-	}
+    /**
+     * Constructor
+     *
+     * @param obj
+     *            object to be parsed
+     */
+    public AbstractDuplicatesParser(final OtpErlangObject obj) {
+        parse(obj);
+    }
 
-	public List<DuplicatedCodeElement> getDuplicates() {
-		return duplicates;
-	}
+    @Override
+    public List<DuplicatedCodeElement> getDuplicates() {
+        return duplicates;
+    }
 
-	public String getErrorMessage() {
-		return errorMessage;
-	}
+    @Override
+    public String getErrorMessage() {
+        return errorMessage;
+    }
 
-	public boolean isSuccessful() {
-		return isSuccessful;
-	}
+    @Override
+    public boolean isSuccessful() {
+        return isSuccessful;
+    }
 
-	protected void setUnSuccessful(String errorMessage) {
-		isSuccessful = false;
-		this.errorMessage = errorMessage;
-	}
+    protected void setUnSuccessful(final String errorMessage) {
+        isSuccessful = false;
+        this.errorMessage = errorMessage;
+    }
 }

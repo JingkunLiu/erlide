@@ -27,100 +27,67 @@ import org.erlide.ui.console.ConsoleMessages;
  * ConsoleRemoveAllTerminatedAction
  */
 @SuppressWarnings("restriction")
-public class ConsoleRemoveAllTerminatedAction extends Action implements
-		IUpdate, ILaunchesListener2 {
+public class ConsoleRemoveAllTerminatedAction extends Action implements IUpdate,
+        ILaunchesListener2 {
 
-	public void dispose() {
-		DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
-	}
+    public void dispose() {
+        DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(this);
+    }
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see org.eclipse.ui.texteditor.IUpdate#update()
-	 */
-	public void update() {
-		ILaunch[] launches = DebugPlugin.getDefault().getLaunchManager()
-				.getLaunches();
-		for (int i = 0; i < launches.length; i++) {
-			ILaunch launch = launches[i];
-			if (launch.isTerminated()) {
-				setEnabled(true);
-				return;
-			}
-		}
-		setEnabled(false);
+    @Override
+    public void update() {
+        final ILaunch[] launches = DebugPlugin.getDefault().getLaunchManager()
+                .getLaunches();
+        for (int i = 0; i < launches.length; i++) {
+            final ILaunch launch = launches[i];
+            if (launch.isTerminated()) {
+                setEnabled(true);
+                return;
+            }
+        }
+        setEnabled(false);
 
-	}
+    }
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see org.eclipse.jface.action.IAction#run()
-	 */
-	@Override
-	public void run() {
-		ILaunch[] launches = DebugPlugin.getDefault().getLaunchManager()
-				.getLaunches();
-		RemoveAllTerminatedAction.removeTerminatedLaunches(launches);
-	}
+    @Override
+    public void run() {
+        final ILaunch[] launches = DebugPlugin.getDefault().getLaunchManager()
+                .getLaunches();
+        RemoveAllTerminatedAction.removeTerminatedLaunches(launches);
+    }
 
-	public ConsoleRemoveAllTerminatedAction() {
-		super(ConsoleMessages.ConsoleRemoveAllTerminatedAction_0);
-		PlatformUI.getWorkbench().getHelpSystem().setHelp(this,
-				IDebugHelpContextIds.CONSOLE_REMOVE_ALL_TERMINATED);
-		setToolTipText(ConsoleMessages.ConsoleRemoveAllTerminatedAction_1);
-		setImageDescriptor(DebugPluginImages
-				.getImageDescriptor(IDebugUIConstants.IMG_LCL_REMOVE_ALL));
-		setDisabledImageDescriptor(DebugPluginImages
-				.getImageDescriptor(IInternalDebugUIConstants.IMG_DLCL_REMOVE_ALL));
-		setHoverImageDescriptor(DebugPluginImages
-				.getImageDescriptor(IDebugUIConstants.IMG_LCL_REMOVE_ALL));
-		DebugPlugin.getDefault().getLaunchManager().addLaunchListener(this);
-		update();
-	}
+    public ConsoleRemoveAllTerminatedAction() {
+        super(ConsoleMessages.ConsoleRemoveAllTerminatedAction_0);
+        PlatformUI.getWorkbench().getHelpSystem()
+                .setHelp(this, IDebugHelpContextIds.CONSOLE_REMOVE_ALL_TERMINATED);
+        setToolTipText(ConsoleMessages.ConsoleRemoveAllTerminatedAction_1);
+        setImageDescriptor(DebugPluginImages
+                .getImageDescriptor(IDebugUIConstants.IMG_LCL_REMOVE_ALL));
+        setDisabledImageDescriptor(DebugPluginImages
+                .getImageDescriptor(IInternalDebugUIConstants.IMG_DLCL_REMOVE_ALL));
+        setHoverImageDescriptor(DebugPluginImages
+                .getImageDescriptor(IDebugUIConstants.IMG_LCL_REMOVE_ALL));
+        DebugPlugin.getDefault().getLaunchManager().addLaunchListener(this);
+        update();
+    }
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see
-	 * org.eclipse.debug.core.ILaunchesListener#launchesRemoved(org.eclipse.
-	 * debug.core.ILaunch[])
-	 */
-	public void launchesRemoved(ILaunch[] launches) {
-		if (isEnabled()) {
-			update();
-		}
-	}
+    @Override
+    public void launchesRemoved(final ILaunch[] launches) {
+        if (isEnabled()) {
+            update();
+        }
+    }
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see
-	 * org.eclipse.debug.core.ILaunchesListener#launchesAdded(org.eclipse.debug
-	 * .core.ILaunch[])
-	 */
-	public void launchesAdded(ILaunch[] launches) {
-	}
+    @Override
+    public void launchesAdded(final ILaunch[] launches) {
+    }
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see
-	 * org.eclipse.debug.core.ILaunchesListener#launchesChanged(org.eclipse.
-	 * debug.core.ILaunch[])
-	 */
-	public void launchesChanged(ILaunch[] launches) {
-	}
+    @Override
+    public void launchesChanged(final ILaunch[] launches) {
+    }
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see
-	 * org.eclipse.debug.core.ILaunchesListener2#launchesTerminated(org.eclipse
-	 * .debug.core.ILaunch[])
-	 */
-	public void launchesTerminated(ILaunch[] launches) {
-		update();
-	}
+    @Override
+    public void launchesTerminated(final ILaunch[] launches) {
+        update();
+    }
 }

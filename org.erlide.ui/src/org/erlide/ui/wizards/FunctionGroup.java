@@ -1,9 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2004 Lukas Larsson and others.
- * All rights reserved. This program and the accompanying materials 
+ * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Lukas Larsson
  *******************************************************************************/
@@ -29,7 +29,7 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
-import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.util.ErlLogger;
 
 /**
  * @author Lukas Larsson
@@ -43,25 +43,15 @@ public class FunctionGroup implements SelectionListener {
     // private final String currentSkeleton = "None";
 
     private Table fTable;
-
     private TableItem fEditingItem;
-
     Text functionNameText;
-
     Text arityText;
-
-    private final TableColumn tableColumns[] = new TableColumn[2];
-
-    Button addFunction;
-
-    // Button addState;
-
-    Button removeFunction;
-
-    Button editFunction;
-
-    Button exportButton;
-
+    private final TableColumn[] tableColumns = new TableColumn[2];
+    Button addFunctionBtn;
+    // Button addStateBtn;
+    Button removeFunctionBtn;
+    Button editFunctionBtn;
+    Button exportButtonBtn;
     ErlangFileWizardPage fWizPage;
 
     FunctionGroup(final Composite parent, final ErlangFileWizardPage wizPage) {
@@ -89,8 +79,8 @@ public class FunctionGroup implements SelectionListener {
     }
 
     private void createTable(final Composite parent) {
-        fTable = new Table(parent, SWT.SINGLE | SWT.V_SCROLL
-                | SWT.FULL_SELECTION | SWT.CHECK);
+        fTable = new Table(parent, SWT.SINGLE | SWT.V_SCROLL | SWT.FULL_SELECTION
+                | SWT.CHECK);
         fTable.showSelection();
         fTable.setHeaderVisible(true);
         fTable.setLinesVisible(true);
@@ -114,17 +104,17 @@ public class FunctionGroup implements SelectionListener {
         final GridLayout fill = new GridLayout(1, false);
         container.setLayout(fill);
 
-        removeFunction = new Button(container, SWT.PUSH);
-        removeFunction.setText("Remove Function");
+        removeFunctionBtn = new Button(container, SWT.PUSH);
+        removeFunctionBtn.setText("Remove Function");
         // removeFunction.setLayoutData(new
         // GridData(SWT.FILL,SWT.CENTER,true,false));
-        removeFunction.addSelectionListener(this);
+        removeFunctionBtn.addSelectionListener(this);
 
-        editFunction = new Button(container, SWT.PUSH);
-        editFunction.setText("    Edit Function   ");
+        editFunctionBtn = new Button(container, SWT.PUSH);
+        editFunctionBtn.setText("    Edit Function   ");
         // editFunction.setLayoutData(new
         // GridData(SWT.FILL,SWT.CENTER,true,false));
-        editFunction.addSelectionListener(this);
+        editFunctionBtn.addSelectionListener(this);
 
         /*
          * addState = new Button(container,SWT.PUSH); addState.setText(" Toggle
@@ -136,20 +126,19 @@ public class FunctionGroup implements SelectionListener {
 
     private void createInputField(final Composite parent) {
         final Composite container = new Composite(parent, SWT.NULL);
-        container
-                .setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        container.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         final GridLayout layout = new GridLayout(4, false);
         container.setLayout(layout);
 
-        exportButton = new Button(container, SWT.CHECK);
-        exportButton.setSelection(true);
-        exportButton.addSelectionListener(this);
+        exportButtonBtn = new Button(container, SWT.CHECK);
+        exportButtonBtn.setSelection(true);
+        exportButtonBtn.addSelectionListener(this);
 
         functionNameText = new Text(container, SWT.BORDER | SWT.SINGLE);
-        functionNameText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true,
-                false));
+        functionNameText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         functionNameText.addModifyListener(new ModifyListener() {
 
+            @Override
             public void modifyText(final ModifyEvent e) {
                 dialogChanged();
             }
@@ -158,57 +147,49 @@ public class FunctionGroup implements SelectionListener {
         arityText = new Text(container, SWT.BORDER | SWT.SINGLE);
         arityText.addModifyListener(new ModifyListener() {
 
+            @Override
             public void modifyText(final ModifyEvent e) {
                 dialogChanged();
             }
         });
         arityText.addKeyListener(new KeyListener() {
 
+            @Override
             public void keyPressed(final KeyEvent e) {
-                ErlLogger.debug(e.character + " was pressed.");
                 fWizPage.gettingInput = true;
             }
 
+            @Override
             public void keyReleased(final KeyEvent e) {
-                ErlLogger.debug(e.character + " was released.");
                 fWizPage.gettingInput = false;
             }
         });
 
-        addFunction = new Button(container, SWT.PUSH);
-        addFunction.setText("          Apply          ");
-        addFunction
-                .setToolTipText("Create a new function or edit an existing one.");
-        addFunction.addSelectionListener(new SelectionListener() {
+        addFunctionBtn = new Button(container, SWT.PUSH);
+        addFunctionBtn.setText("          Apply          ");
+        addFunctionBtn.setToolTipText("Create a new function or edit an existing one.");
+        addFunctionBtn.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(final SelectionEvent e) {
                 addFunction(functionNameText.getText(),
-                        Integer.parseInt(arityText.getText()),
-                        FunctionGroup.NONE, exportButton.getSelection());
+                        Integer.parseInt(arityText.getText()), FunctionGroup.NONE,
+                        exportButtonBtn.getSelection());
                 functionNameText.setText("");
                 arityText.setText("0");
             }
 
+            @Override
             public void widgetDefaultSelected(final SelectionEvent e) {
-                // TODO Auto-generated method stub
-
             }
         });
 
     }
 
-    /**
-     * TODO Write description of addFunction in FunctionGroup.
-     * 
-     * @param name
-     * @param arity
-     * @param type
-     * @param exported
-     */
     void addFunction(final String name, final int arity, final int type,
             final boolean exported) {
-        final TableItem item = fEditingItem != null ? fEditingItem
-                : new TableItem(fTable, SWT.NULL, 0);
+        final TableItem item = fEditingItem != null ? fEditingItem : new TableItem(
+                fTable, SWT.NULL, 0);
         item.setChecked(exported);
         item.setText(0, name + getPostfix(type));
         item.setText(1, "" + arity);
@@ -219,12 +200,6 @@ public class FunctionGroup implements SelectionListener {
         }
     }
 
-    /**
-     * TODO Write description of getPostfix in FunctionGroup.
-     * 
-     * @param type
-     * @return
-     */
     private String getPostfix(final int type) {
         switch (type) {
         case FunctionGroup.FSM:
@@ -234,13 +209,9 @@ public class FunctionGroup implements SelectionListener {
         }
     }
 
-    /**
-     * TODO Write description of dialogChanged in FunctionGroup.
-     * 
-     */
     void dialogChanged() {
         if (functionNameText.getText().length() != 0) {
-            final TableItem allTableItems[] = fTable.getItems();
+            final TableItem[] allTableItems = fTable.getItems();
             for (final TableItem element : allTableItems) {
                 if (element.getText(0).equals(functionNameText.getText())
                         && element.getText(1).equals(arityText.getText())) {
@@ -264,7 +235,7 @@ public class FunctionGroup implements SelectionListener {
             updateStatus(null);
         } else {
             updateStatus(null);
-            addFunction.setEnabled(false);
+            addFunctionBtn.setEnabled(false);
         }
 
     }
@@ -275,7 +246,7 @@ public class FunctionGroup implements SelectionListener {
         fWizPage.setPageComplete(message == null);
 
         // local buttons used for data input
-        addFunction.setEnabled(message == null);
+        addFunctionBtn.setEnabled(message == null);
     }
 
     public void enableFSM(final boolean value) {
@@ -285,7 +256,7 @@ public class FunctionGroup implements SelectionListener {
     public Function[] getFunctionData() {
         removeEdit();
 
-        final TableItem function[] = fTable.getItems();
+        final TableItem[] function = fTable.getItems();
         final ArrayList<Function> functionList = new ArrayList<Function>();
         for (final TableItem element : function) {
             if (!"".equals(element.getText(0))) {
@@ -303,36 +274,24 @@ public class FunctionGroup implements SelectionListener {
                 functionList.add(f);
             }
         }
-        final Function[] functions = functionList
-                .toArray(new Function[functionList.size()]);
+        final Function[] functions = functionList.toArray(new Function[functionList
+                .size()]);
 
         return functions;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.swt.events.SelectionListener#widgetDefaultSelected(org.eclipse
-     * .swt.events.SelectionEvent)
-     */
+    @Override
     public void widgetDefaultSelected(final SelectionEvent e) {
         // do nothing, I don't even know when this event is triggered.
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.swt.events.SelectionListener#widgetSelected(org.eclipse.swt
-     * .events.SelectionEvent)
-     */
+    @Override
     public void widgetSelected(final SelectionEvent e) {
         ErlLogger.debug("widgetSelected: e.item = " + e.item);
         ErlLogger.debug("widgetSelected: e.widget = " + e.widget);
 
-        if (e.widget == removeFunction) {
-            final TableItem itemsToRemove[] = fTable.getSelection();
+        if (e.widget == removeFunctionBtn) {
+            final TableItem[] itemsToRemove = fTable.getSelection();
             for (final TableItem element : itemsToRemove) {
                 fTable.remove(fTable.indexOf(element));
                 if (element == fEditingItem) {
@@ -340,7 +299,7 @@ public class FunctionGroup implements SelectionListener {
                 }
             }
 
-        } else if (e.widget == editFunction) {
+        } else if (e.widget == editFunctionBtn) {
             if (fEditingItem != null) {
                 removeEdit();
             }
@@ -350,9 +309,8 @@ public class FunctionGroup implements SelectionListener {
                 fEditingItem = selectedItem;
                 functionNameText.setText(selectedItem.getText(0));
                 arityText.setText(selectedItem.getText(1));
-                exportButton.setSelection(selectedItem.getChecked());
-                fEditingItem.setText(0, selectedItem.getText(0)
-                        + "<<Being Edited>>");
+                exportButtonBtn.setSelection(selectedItem.getChecked());
+                fEditingItem.setText(0, selectedItem.getText(0) + "<<Being Edited>>");
             }
             // } else if (e.widget == addState) {
 

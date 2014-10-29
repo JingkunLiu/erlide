@@ -15,6 +15,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -31,36 +32,33 @@ import org.eclipse.jface.text.source.projection.ProjectionViewer;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
-import org.erlide.core.erlang.ErlElementDelta;
-import org.erlide.core.erlang.ErlModelException;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlComment;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlElement.Kind;
-import org.erlide.core.erlang.IErlElementDelta;
-import org.erlide.core.erlang.IErlMember;
-import org.erlide.core.erlang.IErlModel;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.core.erlang.IParent;
-import org.erlide.core.erlang.ISourceRange;
-import org.erlide.core.erlang.ISourceReference;
-import org.erlide.core.erlang.util.ElementChangedEvent;
-import org.erlide.core.erlang.util.IElementChangedListener;
-import org.erlide.jinterface.util.ErlLogger;
-import org.erlide.ui.ErlideUIPlugin;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.IElementChangedListener;
+import org.erlide.engine.model.IErlModel;
+import org.erlide.engine.model.IParent;
+import org.erlide.engine.model.erlang.IErlComment;
+import org.erlide.engine.model.erlang.IErlMember;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.erlang.ISourceRange;
+import org.erlide.engine.model.erlang.ISourceReference;
+import org.erlide.engine.model.root.ErlElementKind;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.engine.model.root.IErlElementDelta;
 import org.erlide.ui.editors.erl.ErlangEditor;
 import org.erlide.ui.editors.erl.folding.IErlangFoldingStructureProvider;
 import org.erlide.ui.editors.erl.folding.IErlangFoldingStructureProviderExtension;
 import org.erlide.ui.internal.DocumentCharacterIterator;
+import org.erlide.ui.internal.ErlideUIPlugin;
 import org.erlide.ui.prefs.PreferenceConstants;
 import org.erlide.ui.util.ErlModelUtils;
+import org.erlide.ui.util.PerformanceTuning;
+import org.erlide.util.ErlLogger;
 
-public class DefaultErlangFoldingStructureProvider implements
-        IProjectionListener, IErlangFoldingStructureProvider,
-        IErlangFoldingStructureProviderExtension {
+public class DefaultErlangFoldingStructureProvider implements IProjectionListener,
+        IErlangFoldingStructureProvider, IErlangFoldingStructureProviderExtension {
 
-    private static final class ErlangProjectionAnnotation extends
-            ProjectionAnnotation {
+    private static final class ErlangProjectionAnnotation extends ProjectionAnnotation {
 
         private IErlElement fErlElement;
 
@@ -113,7 +111,7 @@ public class DefaultErlangFoldingStructureProvider implements
 
     /**
      * Filter for annotations.
-     * 
+     *
      * @since 3.2
      */
     private static interface Filter {
@@ -136,17 +134,16 @@ public class DefaultErlangFoldingStructureProvider implements
 
     }
 
-    private static final class ErlangElementSetFilter extends
-            MatchCollapsedFilter {
+    private static final class ErlangElementSetFilter extends MatchCollapsedFilter {
 
         private final Set<IErlElement> fSet;
 
-        ErlangElementSetFilter(final Set<IErlElement> set,
-                final boolean matchCollapsed) {
+        ErlangElementSetFilter(final Set<IErlElement> set, final boolean matchCollapsed) {
             super(matchCollapsed);
             fSet = set;
         }
 
+        @Override
         public boolean match(final ErlangProjectionAnnotation annotation) {
             if (stateMatch(annotation) && !annotation.isComment()
                     && !annotation.isMarkedDeleted()) {
@@ -159,32 +156,11 @@ public class DefaultErlangFoldingStructureProvider implements
         }
     }
 
-    class ElementChangedListener implements IElementChangedListener {
-
-        /*
-         * @see
-         * org.eclipse.jdt.core.IElementChangedListener#elementChanged(org.eclipse
-         * .jdt.core.ElementChangedEvent)
-         */
-        public void elementChanged(final ElementChangedEvent e) {
-            IErlElementDelta delta = e.getDelta();
-            if (delta == null) {
-                return;
-            }
-            delta = delta.findElement(fModule);
-            if (delta == null) {
-                return;
-            }
-            processDelta(delta);
-        }
-
-    }
-
     /**
      * Projection position that will return two foldable regions: one folding
      * away the region from after the '/**' to the beginning of the content, the
      * other from after the first content line until after the comment.
-     * 
+     *
      * @since 3.1
      */
     private static final class CommentPosition extends Position implements
@@ -198,6 +174,7 @@ public class DefaultErlangFoldingStructureProvider implements
          * @seeorg.eclipse.jface.text.source.projection.IProjectionPosition#
          * computeFoldingRegions(org.eclipse.jface.text.IDocument)
          */
+        @Override
         public IRegion[] computeProjectionRegions(final IDocument document)
                 throws BadLocationException {
             final DocumentCharacterIterator sequence = new DocumentCharacterIterator(
@@ -206,8 +183,7 @@ public class DefaultErlangFoldingStructureProvider implements
             final int contentStart = findFirstContent(sequence, prefixEnd);
 
             final int firstLine = document.getLineOfOffset(offset + prefixEnd);
-            final int captionLine = document.getLineOfOffset(offset
-                    + contentStart);
+            final int captionLine = document.getLineOfOffset(offset + contentStart);
             final int lastLine = document.getLineOfOffset(offset + length);
 
             Assert.isTrue(firstLine <= captionLine,
@@ -220,8 +196,7 @@ public class DefaultErlangFoldingStructureProvider implements
                 // preRegion= new Region(offset + prefixEnd, contentStart -
                 // prefixEnd);
                 final int preOffset = document.getLineOffset(firstLine);
-                final IRegion preEndLineInfo = document
-                        .getLineInformation(captionLine);
+                final IRegion preEndLineInfo = document.getLineInformation(captionLine);
                 final int preEnd = preEndLineInfo.getOffset();
                 preRegion = new Region(preOffset, preEnd - preOffset);
             } else {
@@ -230,8 +205,8 @@ public class DefaultErlangFoldingStructureProvider implements
 
             if (captionLine < lastLine) {
                 final int postOffset = document.getLineOffset(captionLine + 1);
-                final IRegion postRegion = new Region(postOffset, offset
-                        + length - postOffset);
+                final IRegion postRegion = new Region(postOffset, offset + length
+                        - postOffset);
 
                 if (preRegion == null) {
                     return new IRegion[] { postRegion };
@@ -250,14 +225,13 @@ public class DefaultErlangFoldingStructureProvider implements
         /**
          * Finds the offset of the first identifier part within
          * <code>content</code>. Returns 0 if none is found.
-         * 
+         *
          * @param content
          *            the content to search
          * @return the first index of a unicode identifier part, or zero if none
          *         can be found
          */
-        private int findFirstContent(final CharSequence content,
-                final int prefixEnd) {
+        private int findFirstContent(final CharSequence content, final int prefixEnd) {
             final int lenght = content.length();
             for (int i = prefixEnd; i < lenght; i++) {
                 if (Character.isUnicodeIdentifierPart(content.charAt(i))) {
@@ -304,6 +278,7 @@ public class DefaultErlangFoldingStructureProvider implements
          * @seeorg.eclipse.jface.text.source.projection.IProjectionPosition#
          * computeCaptionOffset(org.eclipse.jface.text.IDocument)
          */
+        @Override
         public int computeCaptionOffset(final IDocument document) {
             // return 0;
             final DocumentCharacterIterator sequence = new DocumentCharacterIterator(
@@ -316,7 +291,7 @@ public class DefaultErlangFoldingStructureProvider implements
      * Projection position that will return two foldable regions: one folding
      * away the lines before the one containing the simple name of the erlang
      * element, one folding away any lines after the caption.
-     * 
+     *
      * @since 3.1
      */
     private static final class ErlangElementPosition extends Position implements
@@ -324,8 +299,7 @@ public class DefaultErlangFoldingStructureProvider implements
 
         private IErlMember fMember;
 
-        public ErlangElementPosition(final int off, final int len,
-                final IErlMember member) {
+        public ErlangElementPosition(final int off, final int len, final IErlMember member) {
             super(off, len);
             fMember = member;
         }
@@ -345,6 +319,7 @@ public class DefaultErlangFoldingStructureProvider implements
          * @seeorg.eclipse.jface.text.source.projection.IProjectionPosition#
          * computeFoldingRegions(org.eclipse.jface.text.IDocument)
          */
+        @Override
         public IRegion[] computeProjectionRegions(final IDocument document)
                 throws BadLocationException {
             int nameStart = offset;
@@ -378,8 +353,7 @@ public class DefaultErlangFoldingStructureProvider implements
             IRegion preRegion;
             if (firstLine < captionLine) {
                 final int preOffset = document.getLineOffset(firstLine);
-                final IRegion preEndLineInfo = document
-                        .getLineInformation(captionLine);
+                final IRegion preEndLineInfo = document.getLineInformation(captionLine);
                 final int preEnd = preEndLineInfo.getOffset();
                 preRegion = new Region(preOffset, preEnd - preOffset);
             } else {
@@ -388,8 +362,8 @@ public class DefaultErlangFoldingStructureProvider implements
 
             if (captionLine < lastLine) {
                 final int postOffset = document.getLineOffset(captionLine + 1);
-                final IRegion postRegion = new Region(postOffset, offset
-                        + length - postOffset);
+                final IRegion postRegion = new Region(postOffset, offset + length
+                        - postOffset);
 
                 if (preRegion == null) {
                     return new IRegion[] { postRegion };
@@ -409,6 +383,7 @@ public class DefaultErlangFoldingStructureProvider implements
          * @seeorg.eclipse.jface.text.source.projection.IProjectionPosition#
          * computeCaptionOffset(org.eclipse.jface.text.IDocument)
          */
+        @Override
         public int computeCaptionOffset(final IDocument document)
                 throws BadLocationException {
             int nameStart = offset;
@@ -452,12 +427,13 @@ public class DefaultErlangFoldingStructureProvider implements
             super(matchCollapsed);
         }
 
+        @Override
         public boolean match(final ErlangProjectionAnnotation annotation) {
             if (stateMatch(annotation) && !annotation.isComment()
                     && !annotation.isMarkedDeleted()) {
                 final IErlElement element = annotation.getElement();
-                final Kind kind = element.getKind();
-                return kind == Kind.FUNCTION || kind == Kind.CLAUSE;
+                final ErlElementKind kind = element.getKind();
+                return kind == ErlElementKind.FUNCTION || kind == ErlElementKind.CLAUSE;
             }
             return false;
         }
@@ -469,6 +445,7 @@ public class DefaultErlangFoldingStructureProvider implements
             super(matchCollapsed);
         }
 
+        @Override
         public boolean match(final ErlangProjectionAnnotation annotation) {
             if (stateMatch(annotation) && annotation.isComment()
                     && !annotation.isMarkedDeleted()) {
@@ -481,20 +458,21 @@ public class DefaultErlangFoldingStructureProvider implements
     /* filters */
     /**
      * Member filter, matches nested members (but not top-level types).
-     * 
+     *
      * @since 3.2
      */
     private final Filter fCollapseFunctionsFilter = new FunctionsFilter(false);
 
     /**
      * Comment filter, matches comments.
-     * 
+     *
      * @since 3.2
      */
     private final Filter fCollapseCommentsFilter = new CommentsFilter(false);
 
     private final Filter fExpandAllFilter = new Filter() {
 
+        @Override
         public boolean match(final ErlangProjectionAnnotation annotation) {
             return annotation.isCollapsed();
         }
@@ -504,24 +482,26 @@ public class DefaultErlangFoldingStructureProvider implements
     public DefaultErlangFoldingStructureProvider() {
     }
 
+    @Override
     public void install(final ITextEditor editor, final ProjectionViewer viewer) {
         if (editor instanceof ErlangEditor) {
             fFirstTimeInitialCollapse = true;
             fEditor = editor;
             fViewer = viewer;
             fViewer.addProjectionListener(this);
-            final IErlModel mdl = ErlangCore.getModel();
+            final IErlModel mdl = ErlangEngine.getInstance().getModel();
             mdl.addModelChangeListener(this);
         }
     }
 
+    @Override
     public void uninstall() {
         if (isInstalled()) {
             projectionDisabled();
             fViewer.removeProjectionListener(this);
             fViewer = null;
             fEditor = null;
-            ErlangCore.getModel().removeModelChangeListener(this);
+            ErlangEngine.getInstance().getModel().removeModelChangeListener(this);
         }
     }
 
@@ -533,6 +513,7 @@ public class DefaultErlangFoldingStructureProvider implements
      * @seeorg.eclipse.jface.text.source.projection.IProjectionListener#
      * projectionEnabled()
      */
+    @Override
     public void projectionEnabled() {
         // http://home.ott.oti.com/teams/wswb/anon/out/vms/index.html
         // projectionEnabled messages are not always paired with
@@ -544,24 +525,23 @@ public class DefaultErlangFoldingStructureProvider implements
 
         initialize();
         if (fEditor instanceof ErlangEditor && fModule != null) {
-            fElementListener = new ElementChangedListener();
-            ErlangCore.getModelManager().addElementChangedListener(
-                    fElementListener);
             boolean structureKnown = false;
             try {
                 structureKnown = fModule.isStructureKnown();
             } catch (final ErlModelException e1) {
             }
             if (structureKnown) {
-                final IErlElementDelta d = new ErlElementDelta(
-                        IErlElementDelta.CHANGED, IErlElementDelta.F_CONTENT,
-                        fModule);
+                final IErlElementDelta d = ErlangEngine
+                        .getInstance()
+                        .getModel()
+                        .createElementDelta(IErlElementDelta.CHANGED,
+                                IErlElementDelta.F_CONTENT, fModule);
                 processDelta(d);
             } else {
                 try {
                     fModule.open(null);
                 } catch (final ErlModelException e) {
-                    e.printStackTrace();
+                    ErlLogger.error(e);
                 }
             }
         }
@@ -571,35 +551,37 @@ public class DefaultErlangFoldingStructureProvider implements
      * @seeorg.eclipse.jface.text.source.projection.IProjectionListener#
      * projectionDisabled()
      */
+    @Override
     public void projectionDisabled() {
         fCachedDocument = null;
         if (fElementListener != null) {
-            ErlangCore.getModelManager().removeElementChangedListener(
-                    fElementListener);
+            ErlangEngine.getInstance().getModel()
+                    .removeElementChangedListener(fElementListener);
             fElementListener = null;
         }
     }
 
+    @Override
     public void initialize() {
         if (!isInstalled()) {
             return;
         }
 
         initializePreferences();
-        fModule = ErlModelUtils.getModule(fEditor.getEditorInput());
+        try {
+            fModule = ErlModelUtils.getModule(fEditor.getEditorInput());
+        } catch (final CoreException e) {
+            ErlLogger.error(e);
+        }
     }
 
     private void initializePreferences() {
-        final IPreferenceStore store = ErlideUIPlugin.getDefault()
-                .getPreferenceStore();
-        fAllowCollapsing = store
-                .getBoolean(PreferenceConstants.EDITOR_FOLDING_ENABLED);
-        fCollapseClauses = store
-                .getBoolean(PreferenceConstants.EDITOR_FOLDING_CLAUSES);
+        final IPreferenceStore store = ErlideUIPlugin.getDefault().getPreferenceStore();
+        fAllowCollapsing = store.getBoolean(PreferenceConstants.EDITOR_FOLDING_ENABLED);
+        fCollapseClauses = store.getBoolean(PreferenceConstants.EDITOR_FOLDING_CLAUSES);
         fCollapseHeaderComments = store
                 .getBoolean(PreferenceConstants.EDITOR_FOLDING_HEADER_COMMENTS);
-        fCollapseComments = store
-                .getBoolean(PreferenceConstants.EDITOR_FOLDING_COMMENTS);
+        fCollapseComments = store.getBoolean(PreferenceConstants.EDITOR_FOLDING_COMMENTS);
         fCollapseTypespecs = store
                 .getBoolean(PreferenceConstants.EDITOR_FOLDING_TYPESPECS);
     }
@@ -629,10 +611,8 @@ public class DefaultErlangFoldingStructureProvider implements
         }
     }
 
-    private void computeAdditions(
-            final Collection<? extends IErlElement> elements,
-            final Map<ErlangProjectionAnnotation, Position> map)
-            throws ErlModelException {
+    private void computeAdditions(final Collection<? extends IErlElement> elements,
+            final Map<ErlangProjectionAnnotation, Position> map) throws ErlModelException {
         if (elements == null) {
             return;
         }
@@ -650,11 +630,11 @@ public class DefaultErlangFoldingStructureProvider implements
         boolean createProjection = false;
         boolean collapse = false;
 
-        if (element.getKind() == IErlElement.Kind.CLAUSE
-                || element.getKind() == IErlElement.Kind.FUNCTION) {
+        if (element.getKind() == ErlElementKind.CLAUSE
+                || element.getKind() == ErlElementKind.FUNCTION) {
             collapse = fAllowCollapsing && fCollapseClauses;
             createProjection = true;
-        } else if (element.getKind() == IErlElement.Kind.COMMENT) {
+        } else if (element.getKind() == ErlElementKind.COMMENT) {
             final IErlComment c = (IErlComment) element;
             if (c.isHeader()) {
                 collapse = fAllowCollapsing && fCollapseHeaderComments;
@@ -662,27 +642,26 @@ public class DefaultErlangFoldingStructureProvider implements
                 collapse = fAllowCollapsing && fCollapseComments;
             }
             createProjection = true;
-        } else if (element.getKind() == IErlElement.Kind.ATTRIBUTE) {
+        } else if (element.getKind() == ErlElementKind.ATTRIBUTE) {
             createProjection = true;
-        } else if (element.getKind() == IErlElement.Kind.EXPORT) {
+        } else if (element.getKind() == ErlElementKind.EXPORT) {
             createProjection = true;
-        } else if (element.getKind() == IErlElement.Kind.RECORD_DEF) {
+        } else if (element.getKind() == ErlElementKind.RECORD_DEF) {
             createProjection = true;
-        } else if (element.getKind() == IErlElement.Kind.MACRO_DEF) {
+        } else if (element.getKind() == ErlElementKind.MACRO_DEF) {
             createProjection = true;
-        } else if (element.getKind() == IErlElement.Kind.TYPESPEC) {
+        } else if (element.getKind() == ErlElementKind.TYPESPEC) {
             collapse = fAllowCollapsing && fCollapseTypespecs;
             createProjection = true;
         }
         if (createProjection) {
             final IRegion region = computeProjectionRanges(element);
             if (region != null) {
-                final Position position = createProjectionPosition(region,
-                        element);
+                final Position position = createProjectionPosition(region, element);
                 if (position != null) {
                     map.put(new ErlangProjectionAnnotation(element, collapse
-                            && fFirstTimeInitialCollapse,
-                            element instanceof IErlComment), position);
+                            && fFirstTimeInitialCollapse, element instanceof IErlComment),
+                            position);
                 }
             }
         }
@@ -697,23 +676,17 @@ public class DefaultErlangFoldingStructureProvider implements
      * than one range may be returned if the element has a leading comment which
      * gets folded separately. If there are no foldable regions,
      * <code>null</code> is returned.
-     * 
+     *
      * @param element
      *            the erlang element that can be folded
      * @return the regions to be folded, or <code>null</code> if there are none
      */
     private IRegion computeProjectionRanges(final IErlElement element) {
-
-        try {
-            if (element instanceof ISourceReference) {
-                final ISourceReference reference = (ISourceReference) element;
-                final ISourceRange range = reference.getSourceRange();
-                return new Region(range.getOffset(), range.getLength());
-            }
-        } catch (final ErlModelException e) {
-            ErlLogger.warn(e);
+        if (element instanceof ISourceReference) {
+            final ISourceReference reference = (ISourceReference) element;
+            final ISourceRange range = reference.getSourceRange();
+            return new Region(range.getOffset(), range.getLength());
         }
-
         return null;
     }
 
@@ -726,8 +699,7 @@ public class DefaultErlangFoldingStructureProvider implements
 
         try {
 
-            final int start = fCachedDocument.getLineOfOffset(region
-                    .getOffset());
+            final int start = fCachedDocument.getLineOfOffset(region.getOffset());
             final int end = fCachedDocument.getLineOfOffset(region.getOffset()
                     + region.getLength());
             if (start != end) {
@@ -745,8 +717,8 @@ public class DefaultErlangFoldingStructureProvider implements
                     return new CommentPosition(offset, endOffset - offset);
                 }
                 if (element instanceof IErlMember) {
-                    return new ErlangElementPosition(offset,
-                            endOffset - offset, (IErlMember) element);
+                    return new ErlangElementPosition(offset, endOffset - offset,
+                            (IErlMember) element);
                 }
             }
 
@@ -779,12 +751,14 @@ public class DefaultErlangFoldingStructureProvider implements
         final IDocumentProvider provider = fEditor.getDocumentProvider();
 
         try {
-
-            fCachedDocument = provider.getDocument(fEditor.getEditorInput());
             fCachedModel = model;
-
-            // fFirstType= null;
-            // fHasHeaderComment = false;
+            fCachedDocument = provider.getDocument(fEditor.getEditorInput());
+            if (fCachedDocument.getNumberOfLines() > PerformanceTuning.get()
+                    .getFoldingLimit()) {
+                // disable folding for files larger than this
+                model.removeAllAnnotations();
+                return;
+            }
 
             final Map<ErlangProjectionAnnotation, Position> additions = new HashMap<ErlangProjectionAnnotation, Position>();
             final List<ErlangProjectionAnnotation> deletions = new ArrayList<ErlangProjectionAnnotation>();
@@ -814,14 +788,11 @@ public class DefaultErlangFoldingStructureProvider implements
                         final Tuple tuple = x.next();
                         final ErlangProjectionAnnotation existingAnnotation = tuple.annotation;
                         final Position existingPosition = tuple.position;
-                        if (newAnnotation.isComment() == existingAnnotation
-                                .isComment()) {
+                        if (newAnnotation.isComment() == existingAnnotation.isComment()) {
                             if (existingPosition != null
                                     && !newPosition.equals(existingPosition)) {
-                                existingPosition.setOffset(newPosition
-                                        .getOffset());
-                                existingPosition.setLength(newPosition
-                                        .getLength());
+                                existingPosition.setOffset(newPosition.getOffset());
+                                existingPosition.setLength(newPosition.getLength());
                                 updates.add(existingAnnotation);
                             }
                             matched = true;
@@ -934,7 +905,7 @@ public class DefaultErlangFoldingStructureProvider implements
      * If a match is found, the annotation gets removed from
      * <code>annotations</code>.
      * </p>
-     * 
+     *
      * @param tuple
      *            the tuple for which we want to find a match
      * @param annotations
@@ -967,8 +938,7 @@ public class DefaultErlangFoldingStructureProvider implements
         return null;
     }
 
-    private Map<Object, List<Tuple>> createAnnotationMap(
-            final IAnnotationModel model) {
+    private Map<Object, List<Tuple>> createAnnotationMap(final IAnnotationModel model) {
         final Map<Object, List<Tuple>> map = new HashMap<Object, List<Tuple>>();
         final Iterator<?> e = model.getAnnotationIterator();
         while (e.hasNext()) {
@@ -987,6 +957,7 @@ public class DefaultErlangFoldingStructureProvider implements
 
         final Comparator<Tuple> comparator = new Comparator<Tuple>() {
 
+            @Override
             public int compare(final Tuple o1, final Tuple o2) {
                 return o1.position.getOffset() - o2.position.getOffset();
             }
@@ -998,64 +969,36 @@ public class DefaultErlangFoldingStructureProvider implements
         return map;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.erlide.ui.editors.erl.folding.IErlangFoldingStructureProviderExtension
-     * #collapseFunctions()
-     */
+    @Override
     public void collapseFunctions() {
         modifyFiltered(fCollapseFunctionsFilter, false);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.erlide.ui.editors.erl.folding.IErlangFoldingStructureProviderExtension
-     * #collapseComments()
-     */
+    @Override
     public void collapseComments() {
         modifyFiltered(fCollapseCommentsFilter, false);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.erlide.ui.editors.erl.folding.IErlangFoldingStructureProviderExtension
-     * #expandAll()
-     */
+    @Override
     public void expandAll() {
         modifyFiltered(fExpandAllFilter, true);
     }
 
-    /*
-     * @see
-     * org.eclipse.jdt.ui.text.folding.IErlangFoldingStructureProviderExtension
-     * #collapseElements(org.eclipse.jdt.core.IErlElement[])
-     */
+    @Override
     public void collapseElements(final IErlElement[] elements) {
-        final Set<IErlElement> set = new HashSet<IErlElement>(
-                Arrays.asList(elements));
+        final Set<IErlElement> set = new HashSet<IErlElement>(Arrays.asList(elements));
         modifyFiltered(new ErlangElementSetFilter(set, false), false);
     }
 
-    /*
-     * @see
-     * org.eclipse.jdt.ui.text.folding.IErlangFoldingStructureProviderExtension
-     * #expandElements(org.eclipse.jdt.core.IErlElement[])
-     */
+    @Override
     public void expandElements(final IErlElement[] elements) {
-        final Set<IErlElement> set = new HashSet<IErlElement>(
-                Arrays.asList(elements));
+        final Set<IErlElement> set = new HashSet<IErlElement>(Arrays.asList(elements));
         modifyFiltered(new ErlangElementSetFilter(set, true), true);
     }
 
     /**
      * Collapses all annotations matched by the passed filter.
-     * 
+     *
      * @param filter
      *            the filter to use to select which annotations to collapse
      * @param expand
@@ -1097,15 +1040,8 @@ public class DefaultErlangFoldingStructureProvider implements
                 modified.toArray(new Annotation[modified.size()]));
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.erlide.core.erlang.IErlModelChangeListener#elementChanged(org.erlide
-     * .core.erlang.IErlElement)
-     */
+    @Override
     public void elementChanged(final IErlElement element) {
-        // TODO fixa elementchangelistener n?n g?ng
         if (fEditor == null) {
             return;
         }
@@ -1134,9 +1070,11 @@ public class DefaultErlangFoldingStructureProvider implements
             if (element instanceof IErlModule && element != fModule) {
                 return;
             }
-            final ErlElementDelta d = new ErlElementDelta(
-                    IErlElementDelta.CHANGED, IErlElementDelta.F_CONTENT,
-                    fModule);
+            final IErlElementDelta d = ErlangEngine
+                    .getInstance()
+                    .getModel()
+                    .createElementDelta(IErlElementDelta.CHANGED,
+                            IErlElementDelta.F_CONTENT, fModule);
             processDelta(d);
         } finally {
             fCachedDocument = null;

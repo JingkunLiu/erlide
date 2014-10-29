@@ -14,9 +14,12 @@ import org.eclipse.jface.viewers.StyledString;
 import org.eclipse.search.ui.text.AbstractTextSearchResult;
 import org.eclipse.search.ui.text.AbstractTextSearchViewPage;
 import org.eclipse.swt.graphics.Image;
-import org.erlide.core.erlang.IErlElement.Kind;
-import org.erlide.core.erlang.util.ErlangFunction;
-import org.erlide.core.erlang.util.ResourceUtil;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.erlang.ErlangFunction;
+import org.erlide.engine.model.erlang.IErlFunction;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.root.ErlElementKind;
+import org.erlide.engine.util.ResourceUtil;
 import org.erlide.ui.editors.erl.outline.ErlangElementImageProvider;
 
 public class SearchResultLabelProvider extends LabelProvider implements
@@ -85,19 +88,16 @@ public class SearchResultLabelProvider extends LabelProvider implements
         return "";
     }
 
-    private static String searchElementFunctionToString(
-            final ErlangSearchElement ese) {
+    private static String searchElementFunctionToString(final ErlangSearchElement ese) {
         final String a = ese.getArguments();
         if (ese.isSubClause()) {
             return ese.getName() + a;
-        } else {
-            final String nameWithArity = ese.getName() + "/" + ese.getArity();
-            if (a != null) {
-                return nameWithArity + "  " + a;
-            } else {
-                return nameWithArity;
-            }
         }
+        final String nameWithArity = ese.getName() + "/" + ese.getArity();
+        if (a != null) {
+            return nameWithArity + "  " + a;
+        }
+        return nameWithArity;
     }
 
     private String searchElementToString(final ErlangSearchElement ese) {
@@ -136,14 +136,26 @@ public class SearchResultLabelProvider extends LabelProvider implements
         // function - ErlangFunction
         // clause - ClauseHead
         // occurrence - ModuleLineFunctionArityRef
-        Kind kind = Kind.ERROR;
+        ErlElementKind kind = ErlElementKind.PROBLEM;
         if (element instanceof String) {
-            kind = Kind.MODULE;
+            kind = ErlElementKind.MODULE;
         } else if (element instanceof ErlangSearchElement) {
             final ErlangSearchElement ese = (ErlangSearchElement) element;
             kind = ese.getKind();
+            if (kind == ErlElementKind.FUNCTION) {
+                final IErlModule module = ese.getModule();
+                try {
+                    module.open(null);
+                } catch (final ErlModelException e) {
+                }
+                final IErlFunction function = module.findFunction(new ErlangFunction(ese
+                        .getName(), ese.getArity()));
+                if (function != null && function.isExported()) {
+                    kind = ErlElementKind.EXPORTFUNCTION;
+                }
+            }
         } else if (element instanceof ErlangFunction) {
-            kind = Kind.FUNCTION;
+            kind = ErlElementKind.FUNCTION;
         }
         return fImageProvider.getImageLabel(ErlangElementImageProvider
                 .getImageDescriptionFromKind(kind));
@@ -172,10 +184,10 @@ public class SearchResultLabelProvider extends LabelProvider implements
         // fLabelProvider.addListener(listener);
     }
 
+    @Override
     public StyledString getStyledText(final Object element) {
         final StyledString result = new StyledString();
-        if (fOrder == SHOW_LABEL_PATH || element instanceof String
-                && isInTree()) {
+        if (fOrder == SHOW_LABEL_PATH || element instanceof String && isInTree()) {
             result.append(getElementText(element));
             result.append(' ');
             result.append(getMatchCountText(element));

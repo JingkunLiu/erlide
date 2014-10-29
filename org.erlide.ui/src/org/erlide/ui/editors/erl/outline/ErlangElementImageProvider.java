@@ -17,24 +17,21 @@ import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.ui.ISharedImages;
-import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.model.IWorkbenchAdapter;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlElement.Kind;
-import org.erlide.core.erlang.IErlFolder;
-import org.erlide.core.erlang.IErlFunction;
-import org.erlide.core.erlang.IErlModel;
-import org.erlide.ui.ErlideUIPlugin;
-import org.erlide.ui.ErlideUIPluginImages;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.erlang.IErlFunction;
+import org.erlide.engine.model.root.ErlElementKind;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.engine.model.root.IErlElementLocator;
+import org.erlide.engine.model.root.IErlFolder;
+import org.erlide.ui.ErlideImage;
+import org.erlide.ui.internal.ErlideUIPlugin;
 import org.erlide.ui.util.ImageDescriptorRegistry;
 
 /**
  * Default strategy of the Erlang plugin for the construction of Erlang element
  * icons.
  */
-@SuppressWarnings("unused")
 public class ErlangElementImageProvider {
 
     /**
@@ -56,17 +53,17 @@ public class ErlangElementImageProvider {
 
     public static final Point BIG_SIZE = new Point(22, 16);
 
-    private static ImageDescriptor DESC_OBJ_PROJECT_CLOSED;
-
-    private static ImageDescriptor DESC_OBJ_PROJECT;
-    {
-        final ISharedImages images = ErlideUIPlugin.getDefault().getWorkbench()
-                .getSharedImages();
-        DESC_OBJ_PROJECT_CLOSED = images
-                .getImageDescriptor(IDE.SharedImages.IMG_OBJ_PROJECT_CLOSED);
-        DESC_OBJ_PROJECT = images
-                .getImageDescriptor(IDE.SharedImages.IMG_OBJ_PROJECT);
-    }
+    // private static ImageDescriptor DESC_OBJ_PROJECT_CLOSED;
+    //
+    // private static ImageDescriptor DESC_OBJ_PROJECT;
+    // {
+    // final ISharedImages images = ErlideUIPlugin.getDefault().getWorkbench()
+    // .getSharedImages();
+    // DESC_OBJ_PROJECT_CLOSED = images
+    // .getImageDescriptor(IDE.SharedImages.IMG_OBJ_PROJECT_CLOSED);
+    // DESC_OBJ_PROJECT = images
+    // .getImageDescriptor(IDE.SharedImages.IMG_OBJ_PROJECT);
+    // }
 
     private ImageDescriptorRegistry fRegistry;
 
@@ -78,7 +75,7 @@ public class ErlangElementImageProvider {
      * Returns the icon for a given element. The icon depends on the element
      * type and element properties. If configured, overlay icons are constructed
      * for <code>ISourceReference</code>s.
-     * 
+     *
      * @param flags
      *            Flags as defined by the ErlangImageLabelProvider
      */
@@ -100,8 +97,7 @@ public class ErlangElementImageProvider {
         return fRegistry;
     }
 
-    private ImageDescriptor computeDescriptor(final Object element,
-            final int flags) {
+    private ImageDescriptor computeDescriptor(final Object element, final int flags) {
         if (element instanceof IErlElement) {
             return getErlImageDescriptor((IErlElement) element, flags);
         } else if (element instanceof IFile) {
@@ -112,11 +108,10 @@ public class ErlangElementImageProvider {
             }
             return getWorkbenchImageDescriptor(file, flags);
         } else if (element instanceof IFolder) {
-            final IErlModel model = ErlangCore.getModel();
-            final IErlFolder ef = (IErlFolder) model
-                    .findElement((IResource) element);
-            if (ef != null && ef.isOnSourcePath()) {
-                final ImageDescriptor desc = getErlImageDescriptor(ef, flags);
+            final IErlElementLocator model = ErlangEngine.getInstance().getModel();
+            final IErlFolder ef = (IErlFolder) model.findElement((IResource) element);
+            if (ef != null && (ef.isOnSourcePath() || ef.isOnIncludePath())) {
+                return getErlImageDescriptor(ef, flags);
             }
         } else if (element instanceof IAdaptable) {
             return getWorkbenchImageDescriptor((IAdaptable) element, flags);
@@ -124,6 +119,7 @@ public class ErlangElementImageProvider {
         return null;
     }
 
+    @SuppressWarnings("unused")
     private static boolean showOverlayIcons(final int flags) {
         return (flags & OVERLAY_ICONS) != 0;
     }
@@ -132,6 +128,7 @@ public class ErlangElementImageProvider {
         return (flags & SMALL_ICONS) != 0;
     }
 
+    @SuppressWarnings("unused")
     private static boolean useLightIcons(final int flags) {
         return (flags & LIGHT_TYPE_ICONS) != 0;
     }
@@ -140,24 +137,23 @@ public class ErlangElementImageProvider {
      * Returns an image descriptor for a module not on the class path. The
      * descriptor includes overlays, if specified.
      */
-    public ImageDescriptor getErlResourceImageDescriptor(final IFile file,
-            final int flags) {
+    public ImageDescriptor getErlResourceImageDescriptor(final IFile file, final int flags) {
         final Point size = useSmallSize(flags) ? SMALL_SIZE : BIG_SIZE;
         return new ErlangElementImageDescriptor(
-                ErlideUIPluginImages.DESC_MODULE_RESOURCE, 0, size);
+                ErlideImage.MODULE_RESOURCE.getDescriptor(), 0, size);
     }
 
     /**
      * Returns an image descriptor for an erlang element. The descriptor
      * includes overlays, if specified.
      */
-    static public ImageDescriptor getErlImageDescriptor(
-            final IErlElement element, final int flags) {
+    static public ImageDescriptor getErlImageDescriptor(final IErlElement element,
+            final int flags) {
         final int adornmentFlags = 0; // computeAdornmentFlags(element,
         // flags);
         final Point size = useSmallSize(flags) ? SMALL_SIZE : BIG_SIZE;
-        return new ErlangElementImageDescriptor(getBaseImageDescriptor(element,
-                flags), adornmentFlags, size);
+        return new ErlangElementImageDescriptor(getBaseImageDescriptor(element, flags),
+                adornmentFlags, size);
     }
 
     /**
@@ -165,15 +161,14 @@ public class ErlangElementImageProvider {
      * overlays, if specified (only error ticks apply). Returns
      * <code>null</code> if no image could be found.
      */
-    public ImageDescriptor getWorkbenchImageDescriptor(
-            final IAdaptable adaptable, final int flags) {
+    public ImageDescriptor getWorkbenchImageDescriptor(final IAdaptable adaptable,
+            final int flags) {
         final IWorkbenchAdapter wbAdapter = (IWorkbenchAdapter) adaptable
                 .getAdapter(IWorkbenchAdapter.class);
         if (wbAdapter == null) {
             return null;
         }
-        final ImageDescriptor descriptor = wbAdapter
-                .getImageDescriptor(adaptable);
+        final ImageDescriptor descriptor = wbAdapter.getImageDescriptor(adaptable);
         if (descriptor == null) {
             return null;
         }
@@ -189,51 +184,75 @@ public class ErlangElementImageProvider {
      * Returns an image descriptor for an Erlang element. This is the base
      * image, no overlays.
      */
-    static public ImageDescriptor getBaseImageDescriptor(
-            final IErlElement element, final int renderFlags) {
+    static public ImageDescriptor getBaseImageDescriptor(final IErlElement element,
+            final int renderFlags) {
         if (element instanceof IErlFunction) {
             final IErlFunction fun = (IErlFunction) element;
             if (fun.isExported()) {
-                return ErlideUIPluginImages.DESC_FUNCTION_EXPORTED;
+                return ErlideImage.FUNCTION_EXPORTED.getDescriptor();
             }
         }
         return getImageDescriptionFromKind(element.getKind());
     }
 
-    public static ImageDescriptor getImageDescriptionFromKind(final Kind kind) {
+    public static ImageDescriptor getImageDescriptionFromKind(final ErlElementKind kind) {
+        ErlideImage result = ErlideImage.UNKNOWN;
         switch (kind) {
         case ATTRIBUTE:
-            return ErlideUIPluginImages.DESC_ATTRIBUTE;
+            result = ErlideImage.ATTRIBUTE;
+            break;
         case CLAUSE:
-            return ErlideUIPluginImages.DESC_FUNCTION_CLAUSE;
+            result = ErlideImage.FUNCTION_CLAUSE;
+            break;
+        case EXPORT:
+            result = ErlideImage.EXPORT;
+            break;
+        case EXPORTFUNCTION:
+            result = ErlideImage.FUNCTION_EXPORTED;
+            break;
+        case FOLDER:
+            result = ErlideImage.SRC_FOLDER;
+            break;
+        case FUNCTION:
+            result = ErlideImage.FUNCTION_DEFAULT;
+            break;
+        case EXTERNAL_ROOT:
+            result = ErlideImage.EXTERNAL_ROOT;
+            break;
+        case EXTERNAL_APP:
+            result = ErlideImage.EXTERNAL_APP;
+            break;
+        case EXTERNAL_FOLDER:
+            result = ErlideImage.EXTERNAL_FOLDER;
+            break;
+        case IMPORT:
+            result = ErlideImage.IMPORT;
+            break;
+        case MACRO_DEF:
+            result = ErlideImage.MACRO_DEF;
+            break;
+        case MODULE:
+            result = ErlideImage.MODULE;
+            break;
+        case RECORD_DEF:
+            result = ErlideImage.RECORD_DEF;
+            break;
+        case TYPESPEC:
+            result = ErlideImage.TYPESPEC_DEF;
+            break;
+        case RECORD_FIELD:
+            result = ErlideImage.RECORD_FIELD;
+            break;
         case COMMENT:
-        case ERROR:
+        case PROBLEM:
         case HEADERCOMMENT:
         case MODEL:
+        case LIBRARY:
         case PROJECT:
-            return ErlideUIPluginImages.DESC_UNKNOWN;
-        case EXPORT:
-            return ErlideUIPluginImages.DESC_EXPORT;
-        case EXPORTFUNCTION:
-            return ErlideUIPluginImages.DESC_FUNCTION_EXPORTED;
-        case FOLDER:
-            return ErlideUIPluginImages.DESC_SRC_FOLDER;
-        case FUNCTION:
-            return ErlideUIPluginImages.DESC_FUNCTION_DEFAULT;
-        case EXTERNAL:
-            return ErlideUIPluginImages.DESC_EXTERNAL;
-        case IMPORT:
-            return ErlideUIPluginImages.DESC_IMPORT;
-        case MACRO_DEF:
-            return ErlideUIPluginImages.DESC_MACRO_DEF;
-        case MODULE:
-            return ErlideUIPluginImages.DESC_MODULE;
-        case RECORD_DEF:
-            return ErlideUIPluginImages.DESC_RECORD_DEF;
-        case TYPESPEC:
-            return ErlideUIPluginImages.DESC_TYPESPEC_DEF;
+            result = ErlideImage.UNKNOWN;
+            break;
         }
-        return ErlideUIPluginImages.DESC_UNKNOWN;
+        return result.getDescriptor();
     }
 
     public void dispose() {

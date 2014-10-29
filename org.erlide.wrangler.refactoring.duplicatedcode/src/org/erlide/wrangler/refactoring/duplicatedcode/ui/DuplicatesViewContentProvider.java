@@ -1,11 +1,10 @@
 /**
- * 
+ *
  */
 package org.erlide.wrangler.refactoring.duplicatedcode.ui;
 
 import java.util.List;
 
-import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.erlide.wrangler.refactoring.duplicatedcode.DuplicatesUIManager;
@@ -16,79 +15,88 @@ import org.erlide.wrangler.refactoring.duplicatedcode.ui.elements.ResultTreeRoot
 
 /**
  * Content provider for the duplicates view.
- * 
+ *
  * @author Gyorgy Orosz
- * 
+ *
  */
-public class DuplicatesViewContentProvider implements
-		IStructuredContentProvider, ITreeContentProvider,
-		IDuplicatedCodeResultDisplayer {
+public class DuplicatesViewContentProvider implements ITreeContentProvider,
+IDuplicatedCodeResultDisplayer {
 
-	private final DuplicatesView duplicatedCodeView;
+    private final DuplicatesView duplicatedCodeView;
 
-	DuplicatesViewContentProvider(DuplicatesView duplicatedCodeView) {
-		this.duplicatedCodeView = duplicatedCodeView;
-		DuplicatesUIManager.setDuplicatedCodeResultDisplayer(this);
-	}
+    DuplicatesViewContentProvider(final DuplicatesView duplicatedCodeView) {
+        this.duplicatedCodeView = duplicatedCodeView;
+        DuplicatesUIManager.setDuplicatedCodeResultDisplayer(this);
+    }
 
-	private ResultTreeRoot invisibleRoot;
+    private ResultTreeRoot invisibleRoot;
 
-	public void inputChanged(Viewer v, Object oldInput, Object newInput) {
-	}
+    @Override
+    public void inputChanged(final Viewer v, final Object oldInput, final Object newInput) {
+    }
 
-	public void dispose() {
-	}
+    @Override
+    public void dispose() {
+    }
 
-	public Object[] getElements(Object parent) {
-		if (parent.equals(this.duplicatedCodeView.getViewSite())) {
-			if (invisibleRoot == null)
-				initialize();
-			return getChildren(invisibleRoot);
-		}
-		return getChildren(parent);
-	}
+    @Override
+    public Object[] getElements(final Object parent) {
+        if (parent.equals(duplicatedCodeView.getViewSite())) {
+            if (invisibleRoot == null) {
+                initialize();
+            }
+            return getChildren(invisibleRoot);
+        }
+        return getChildren(parent);
+    }
 
-	public Object getParent(Object child) {
-		if (child instanceof AbstractResultTreeObject) {
-			return ((AbstractResultTreeObject) child).getParent();
-		}
-		return null;
-	}
+    @Override
+    public Object getParent(final Object child) {
+        if (child instanceof AbstractResultTreeObject) {
+            return ((AbstractResultTreeObject) child).getParent();
+        }
+        return null;
+    }
 
-	public Object[] getChildren(Object parent) {
-		if (parent instanceof AbstractResultTreeParent) {
-			return ((AbstractResultTreeParent) parent).getChildren();
-		}
-		return new Object[0];
-	}
+    @Override
+    public Object[] getChildren(final Object parent) {
+        if (parent instanceof AbstractResultTreeParent) {
+            return ((AbstractResultTreeParent) parent).getChildren();
+        }
+        return new Object[0];
+    }
 
-	public boolean hasChildren(Object parent) {
-		if (parent instanceof AbstractResultTreeParent)
-			return ((AbstractResultTreeParent) parent).hasChildren();
-		return false;
-	}
+    @Override
+    public boolean hasChildren(final Object parent) {
+        if (parent instanceof AbstractResultTreeParent) {
+            return ((AbstractResultTreeParent) parent).hasChildren();
+        }
+        return false;
+    }
 
-	private void initialize() {
-		invisibleRoot = new ResultTreeRoot();
-	}
+    private void initialize() {
+        invisibleRoot = new ResultTreeRoot();
+    }
 
-	/**
-	 * Add a child to the view.
-	 * 
-	 * @param child
-	 *            child to be added.
-	 */
-	public void addChild(AbstractResultTreeObject child) {
-		invisibleRoot.addChild(child);
-	}
+    /**
+     * Add a child to the view.
+     *
+     * @param child
+     *            child to be added.
+     */
+    public void addChild(final AbstractResultTreeObject child) {
+        invisibleRoot.addChild(child);
+    }
 
-	public void showResult(List<DuplicatedCodeElement> result) {
-		invisibleRoot.dropChildren();
-		if (result != null)
-			for (DuplicatedCodeElement d : result) {
-				invisibleRoot.addChild(d);
-			}
-		this.duplicatedCodeView.refresh();
+    @Override
+    public void showResult(final List<DuplicatedCodeElement> result) {
+        invisibleRoot.dropChildren();
+        if (result != null) {
+            for (final DuplicatedCodeElement d : result) {
+                invisibleRoot.addChild(d);
+            }
+        }
+        duplicatedCodeView.refresh();
 
-	}
+    }
 }

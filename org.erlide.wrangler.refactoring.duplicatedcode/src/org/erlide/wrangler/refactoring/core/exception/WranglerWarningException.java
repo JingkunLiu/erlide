@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     György Orosz - initial API and implementation
  ******************************************************************************/
@@ -14,20 +14,20 @@ import org.erlide.wrangler.refactoring.exception.WranglerException;
 
 /**
  * Exception which is used to indicate a warning
- * 
+ *
  * @author Gyorgy Orosz
- * 
+ *
  */
 public class WranglerWarningException extends WranglerException {
 
-	protected WranglerWarningException(String message) {
-		super(message);
+    protected WranglerWarningException(final String message) {
+        super(message);
 
-	}
+    }
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+    /**
+     *
+     */
+    private static final long serialVersionUID = 1L;
 
 }

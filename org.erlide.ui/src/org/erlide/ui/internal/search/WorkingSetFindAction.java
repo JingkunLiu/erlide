@@ -10,28 +10,26 @@
  *******************************************************************************/
 package org.erlide.ui.internal.search;
 
-import java.util.Collection;
-
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.IWorkbenchSite;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.ui.editors.erl.ErlangEditor;
-
-import erlang.ErlangSearchPattern.LimitTo;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.engine.services.search.ErlSearchScope;
+import org.erlide.engine.services.search.LimitTo;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 
 /**
- * Wraps a <code>JavaElementSearchActions</code> to find its results in the
+ * Wraps a <code>ErlangElementSearchActions</code> to find its results in the
  * specified working set.
  * <p>
  * The action is applicable to selections and Search view entries representing a
- * Java element.
- * 
+ * Erlang element.
+ *
  * <p>
  * Note: This class is for internal use only. Clients should not use this class.
  * </p>
- * 
+ *
  * @since 2.0
  */
 public class WorkingSetFindAction extends FindAction {
@@ -42,8 +40,8 @@ public class WorkingSetFindAction extends FindAction {
      * Note: This constructor is for internal use only. Clients should not call
      * this constructor.
      */
-    public WorkingSetFindAction(final IWorkbenchSite site,
-            final FindAction action, final String workingSetName) {
+    public WorkingSetFindAction(final IWorkbenchSite site, final FindAction action,
+            final String workingSetName) {
         super(site);
         init(action, workingSetName);
     }
@@ -52,7 +50,7 @@ public class WorkingSetFindAction extends FindAction {
      * Note: This constructor is for internal use only. Clients should not call
      * this constructor.
      */
-    public WorkingSetFindAction(final ErlangEditor editor,
+    public WorkingSetFindAction(final AbstractErlangEditor editor,
             final FindAction action, final String workingSetName) {
         super(editor);
         init(action, workingSetName);
@@ -69,8 +67,6 @@ public class WorkingSetFindAction extends FindAction {
         setText(workingSetName);
         setImageDescriptor(action.getImageDescriptor());
         setToolTipText(action.getToolTipText());
-        // FIXME PlatformUI.getWorkbench().getHelpSystem().setHelp(this,
-        // IJavaHelpContextIds.WORKING_SET_FIND_ACTION);
     }
 
     @Override
@@ -94,14 +90,8 @@ public class WorkingSetFindAction extends FindAction {
     }
 
     @Override
-    protected Collection<IResource> getScope() {
+    protected ErlSearchScope getScope() throws ErlModelException, CoreException {
         return fAction.getScope();
-    }
-
-    @Override
-    protected Collection<IErlModule> getExternalScope() {
-        // TODO Auto-generated method stub
-        return fAction.getExternalScope();
     }
 
     @Override

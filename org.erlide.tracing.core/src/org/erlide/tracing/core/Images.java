@@ -2,12 +2,13 @@ package org.erlide.tracing.core;
 
 /**
  * Enum describing images used by plugin.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public enum Images {
 
+    //@formatter:off
     /**
      * checked ckeckbox
      */
@@ -45,16 +46,17 @@ public enum Images {
     ULINK_NODE("treeviewer/ulinkNode.png"), //
     UNREGISTER_NODE("treeviewer/unregisterNode.png"), //
     WRONG_MESSAGE_NODE("treeviewer/wrongMessageNode.png");
+    //@formatter:on
 
     private String fileName;
 
-    private Images(String fileName) {
+    private Images(final String fileName) {
         this.fileName = fileName;
     }
 
     /**
      * Returns file name represented by this enum value.
-     * 
+     *
      * @return file name
      */
     public String getFileName() {

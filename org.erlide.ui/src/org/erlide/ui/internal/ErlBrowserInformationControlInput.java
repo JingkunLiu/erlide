@@ -10,21 +10,25 @@
  *******************************************************************************/
 package org.erlide.ui.internal;
 
+import java.net.URL;
+
 import org.eclipse.core.runtime.Assert;
-import org.erlide.core.erlang.IErlElement;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 import org.erlide.ui.util.eclipse.text.BrowserInformationControlInput;
 
 /**
- * Browser input for Javadoc hover.
+ * Browser input for Edoc hover.
  *
  * @since 3.4
  */
-public class ErlBrowserInformationControlInput extends
-        BrowserInformationControlInput {
+public class ErlBrowserInformationControlInput extends BrowserInformationControlInput {
 
     private final Object fElement;
     private final String fHtml;
     private final int fLeadingImageWidth;
+    private final AbstractErlangEditor editor;
+    private final URL docURL;
 
     /**
      * Creates a new browser information control input.
@@ -37,15 +41,20 @@ public class ErlBrowserInformationControlInput extends
      *            HTML contents, must not be null
      * @param leadingImageWidth
      *            the indent required for the element image
+     * @param docPath
+     * @param anchor
      */
     public ErlBrowserInformationControlInput(
             final ErlBrowserInformationControlInput previous,
-            final Object element, final String html, final int leadingImageWidth) {
+            final AbstractErlangEditor editor, final Object element, final String html,
+            final int leadingImageWidth, final URL docURL) {
         super(previous);
+        this.editor = editor;
         Assert.isNotNull(html);
         fElement = element;
         fHtml = html;
         fLeadingImageWidth = leadingImageWidth;
+        this.docURL = docURL;
     }
 
     /*
@@ -60,7 +69,7 @@ public class ErlBrowserInformationControlInput extends
     }
 
     // /**
-    // * Returns the Java element.
+    // * Returns the Erlang element.
     // *
     // * @return the element or <code>null</code> if none available
     // */
@@ -81,7 +90,7 @@ public class ErlBrowserInformationControlInput extends
      */
     @Override
     public Object getInputElement() {
-        return (fElement == null) ? fHtml : fElement;
+        return fElement == null ? fHtml : fElement;
     }
 
     /*
@@ -95,4 +104,13 @@ public class ErlBrowserInformationControlInput extends
         }
         return ""; //$NON-NLS-1$
     }
+
+    public AbstractErlangEditor getEditor() {
+        return editor;
+    }
+
+    public URL getDocumentationURL() {
+        return docURL;
+    }
+
 }

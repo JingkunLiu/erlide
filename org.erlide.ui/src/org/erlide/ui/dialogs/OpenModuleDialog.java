@@ -10,8 +10,8 @@
  *******************************************************************************/
 package org.erlide.ui.dialogs;
 
-import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.erlide.ui.editors.erl.IErlangHelpContextIds;
@@ -19,24 +19,24 @@ import org.erlide.ui.editors.erl.IErlangHelpContextIds;
 /**
  * Shows a list of resources to the user with a text entry field for a string
  * pattern used to filter the list of resources.
- * 
+ *
  */
 public class OpenModuleDialog extends FilteredModulesSelectionDialog {
 
-	/**
-	 * Creates a new instance of the class.
-	 * 
-	 * @param parentShell
-	 *            the parent shell
-	 * @param container
-	 *            the container
-	 * @param typesMask
-	 *            the types mask
-	 */
-	public OpenModuleDialog(Shell parentShell, IContainer container) {
-		super(parentShell, true, container, IResource.FILE);
-		setTitle("Open module");
-		PlatformUI.getWorkbench().getHelpSystem().setHelp(parentShell,
-				IErlangHelpContextIds.OPEN_MODULE_DIALOG);
-	}
+    /**
+     * Creates a new instance of the class.
+     *
+     * @param parentShell
+     *            the parent shell
+     * @param container
+     *            the container
+     * @param typesMask
+     *            the types mask
+     */
+    public OpenModuleDialog(final Shell shell) {
+        super(shell, true, ResourcesPlugin.getWorkspace().getRoot(), IResource.FILE, true);
+        setTitle("Open module");
+        PlatformUI.getWorkbench().getHelpSystem()
+                .setHelp(shell, IErlangHelpContextIds.OPEN_MODULE_DIALOG);
+    }
 }

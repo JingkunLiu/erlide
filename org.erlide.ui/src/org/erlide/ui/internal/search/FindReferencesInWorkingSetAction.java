@@ -10,23 +10,21 @@
  *******************************************************************************/
 package org.erlide.ui.internal.search;
 
-import java.util.Collection;
-
-import org.eclipse.core.resources.IResource;
-import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.IWorkbenchSite;
 import org.eclipse.ui.IWorkingSet;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.ui.editors.erl.ErlangEditor;
+import org.erlide.core.services.search.SearchCoreUtil;
+import org.erlide.engine.services.search.ErlSearchScope;
+import org.erlide.ui.editors.erl.AbstractErlangEditor;
 
 /**
  * Finds references of the selected element in working sets. The action is
- * applicable to selections representing a Java element.
- * 
+ * applicable to selections representing a Erlang element.
+ *
  * <p>
  * This class may be instantiated; it is not intended to be subclassed.
  * </p>
- * 
+ *
  * @since 2.0
  */
 public class FindReferencesInWorkingSetAction extends FindReferencesAction {
@@ -38,7 +36,7 @@ public class FindReferencesInWorkingSetAction extends FindReferencesAction {
      * requires that the selection provided by the site's selection provider is
      * of type <code>org.eclipse.jface.viewers.IStructuredSelection</code>. The
      * user will be prompted to select the working sets.
-     * 
+     *
      * @param site
      *            the site providing context information for this action
      */
@@ -50,7 +48,7 @@ public class FindReferencesInWorkingSetAction extends FindReferencesAction {
      * Creates a new <code>FindReferencesInWorkingSetAction</code>. The action
      * requires that the selection provided by the site's selection provider is
      * of type <code>org.eclipse.jface.viewers.IStructuredSelection</code>.
-     * 
+     *
      * @param site
      *            the site providing context information for this action
      * @param workingSets
@@ -65,24 +63,24 @@ public class FindReferencesInWorkingSetAction extends FindReferencesAction {
     /**
      * Note: This constructor is for internal use only. Clients should not call
      * this constructor.
-     * 
+     *
      * @param editor
-     *            the Java editor
+     *            the Erlang editor
      */
-    public FindReferencesInWorkingSetAction(final ErlangEditor editor) {
+    public FindReferencesInWorkingSetAction(final AbstractErlangEditor editor) {
         this(editor, null);
     }
 
     /**
      * Note: This constructor is for internal use only. Clients should not call
      * this constructor.
-     * 
+     *
      * @param editor
-     *            the Java editor
+     *            the Erlang editor
      * @param workingSets
      *            the working sets to be used in the search
      */
-    public FindReferencesInWorkingSetAction(final ErlangEditor editor,
+    public FindReferencesInWorkingSetAction(final AbstractErlangEditor editor,
             final IWorkingSet[] workingSets) {
         super(editor);
         fWorkingSets = workingSets;
@@ -92,55 +90,13 @@ public class FindReferencesInWorkingSetAction extends FindReferencesAction {
     void init() {
         setText("Working set");
         setToolTipText("Find references in working set");
-        // FIXME setImageDescriptor(JavaPluginImages.DESC_OBJS_SEARCH_REF);
-        // FIXME PlatformUI.getWorkbench().getHelpSystem().setHelp(this,
-        // IJavaHelpContextIds.FIND_REFERENCES_IN_WORKING_SET_ACTION);
     }
 
     @Override
-    protected Collection<IResource> getScope() {
+    protected ErlSearchScope getScope() throws CoreException {
         if (fWorkingSets != null) {
-            return SearchUtil.getWorkingSetsScope(fWorkingSets);
-        } else {
-            return SearchUtil.getWorkspaceScope();
+            return SearchUtil.getWorkingSetsScope(fWorkingSets, false, false);
         }
+        return SearchCoreUtil.getWorkspaceScope(false, false);
     }
-
-    @Override
-    public void run(final IErlElement element) {
-        try {
-            super.performNewSearch(element, getWorkingSetsScope(fWorkingSets),
-                    getWorkingSetsExternalScope(fWorkingSets));
-        } catch (final InterruptedException e) {
-        }
-    }
-
-    @Override
-    public void run(final ITextSelection selection) {
-        try {
-            performNewSearch(selection, getWorkingSetsScope(fWorkingSets),
-                    getWorkingSetsExternalScope(fWorkingSets));
-        } catch (final InterruptedException e) {
-        }
-    }
-
-    // QuerySpecification createQuery(IErlElement element)
-    // throws JavaModelException, InterruptedException {
-    // JavaSearchScopeFactory factory = JavaSearchScopeFactory.getInstance();
-    //
-    // IWorkingSet[] workingSets = fWorkingSets;
-    // if (fWorkingSets == null) {
-    // workingSets = factory.queryWorkingSets();
-    // if (workingSets == null) {
-    // return super.createQuery(element); // in workspace
-    // }
-    // }
-    // SearchUtil.updateLRUWorkingSets(workingSets);
-    // IJavaSearchScope scope = factory.createJavaSearchScope(workingSets,
-    // true);
-    // final String description = factory.getWorkingSetScopeDescription(
-    // workingSets, true);
-    // return new ElementQuerySpecification(element, getLimitTo(), scope,
-    // description);
-    // }
 }

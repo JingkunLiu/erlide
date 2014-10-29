@@ -15,23 +15,23 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 
 /**
  * IOutlineSelectionHandler
- * 
+ *
  */
 public interface IOutlineSelectionHandler {
 
-	/**
-	 * @param e
-	 */
-	public void updateSelection(SelectionChangedEvent e);
+    /**
+     * @param e
+     */
+    public void updateSelection(SelectionChangedEvent e);
 
-	/**
-	 * @param e
-	 */
-	public void updateSelection(Object object);
+    /**
+     * @param e
+     */
+    public void updateSelection(Object object);
 
-	/**
-	 * @return
-	 */
-	public ISortableContentOutlinePage getContentOutline();
+    /**
+     * @return
+     */
+    public ISortableContentOutlinePage getContentOutline();
 
 }

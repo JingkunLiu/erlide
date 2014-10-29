@@ -17,33 +17,33 @@ import org.eclipse.jface.viewers.ViewerComparator;
 
 /**
  * IContentOutlineCreator
- * 
+ *
  */
 public interface IOutlineContentCreator {
 
-	/**
-	 * @return
-	 */
-	public ViewerComparator createOutlineComparator();
+    /**
+     * @return
+     */
+    public ViewerComparator createOutlineComparator();
 
-	/**
-	 * @return
-	 */
-	public ViewerComparator createDefaultOutlineComparator();
+    /**
+     * @return
+     */
+    public ViewerComparator createDefaultOutlineComparator();
 
-	/**
-	 * @return
-	 */
-	public ILabelProvider createOutlineLabelProvider();
+    /**
+     * @return
+     */
+    public ILabelProvider createOutlineLabelProvider();
 
-	/**
-	 * @return
-	 */
-	public ITreeContentProvider createOutlineContentProvider();
+    /**
+     * @return
+     */
+    public ITreeContentProvider createOutlineContentProvider();
 
-	/**
-	 * @return
-	 */
-	public Object getOutlineInput();
+    /**
+     * @return
+     */
+    public Object getOutlineInput();
 
 }

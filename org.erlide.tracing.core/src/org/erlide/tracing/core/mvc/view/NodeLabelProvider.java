@@ -10,26 +10,30 @@ import org.erlide.tracing.core.mvc.model.TracedNode;
 
 /**
  * Provider responsible for displaying nodes in table.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class NodeLabelProvider extends LabelProvider implements ITableLabelProvider {
 
-    public Image getColumnImage(Object element, int index) {
-        TracedNode node = (TracedNode) element;
+    @Override
+    public Image getColumnImage(final Object element, final int index) {
+        final TracedNode node = (TracedNode) element;
 
         if (index == NodeColumn.ENABLED.ordinal()) {
-            if (node.isEnabled())
-                return Activator.getDefault().getImageRegistry().get(Images.CHECKED.toString());
-            else
-                return Activator.getDefault().getImageRegistry().get(Images.UNCHECKED.toString());
-        } else
-            return null;
+            if (node.isEnabled()) {
+                return Activator.getDefault().getImageRegistry()
+                        .get(Images.CHECKED.toString());
+            }
+            return Activator.getDefault().getImageRegistry()
+                    .get(Images.UNCHECKED.toString());
+        }
+        return null;
     }
 
-    public String getColumnText(Object element, int columnIndex) {
-        TracedNode node = (TracedNode) element;
+    @Override
+    public String getColumnText(final Object element, final int columnIndex) {
+        final TracedNode node = (TracedNode) element;
         switch (NodeColumn.getByIndex(columnIndex)) {
         case COOKIE:
             return node.getCookie();

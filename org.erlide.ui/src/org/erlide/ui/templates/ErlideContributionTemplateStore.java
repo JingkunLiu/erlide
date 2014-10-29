@@ -15,13 +15,13 @@ import org.eclipse.jface.text.templates.TemplateException;
 import org.eclipse.jface.text.templates.persistence.TemplatePersistenceData;
 import org.eclipse.jface.text.templates.persistence.TemplateReaderWriter;
 import org.eclipse.ui.editors.text.templates.ContributionTemplateStore;
-import org.erlide.ui.ErlideUIPlugin;
+import org.erlide.ui.internal.ErlideUIPlugin;
 
 public class ErlideContributionTemplateStore extends ContributionTemplateStore {
 
     /**
      * Creates a new template store.
-     * 
+     *
      * @param store
      *            the preference store in which to store custom templates under
      *            <code>key</code>
@@ -29,8 +29,7 @@ public class ErlideContributionTemplateStore extends ContributionTemplateStore {
      *            the key into <code>store</code> where to store custom
      *            templates
      */
-    public ErlideContributionTemplateStore(final IPreferenceStore store,
-            final String key) {
+    public ErlideContributionTemplateStore(final IPreferenceStore store, final String key) {
         super(store, key);
     }
 
@@ -38,7 +37,7 @@ public class ErlideContributionTemplateStore extends ContributionTemplateStore {
      * Creates a new template store with a context type registry. Only templates
      * that specify a context type contained in the registry will be loaded by
      * this store if the registry is not <code>null</code>.
-     * 
+     *
      * @param registry
      *            a context type registry, or <code>null</code> if all templates
      *            should be loaded
@@ -56,7 +55,7 @@ public class ErlideContributionTemplateStore extends ContributionTemplateStore {
 
     /**
      * Loads the templates contributed via the templates extension point.
-     * 
+     *
      * @throws IOException
      *             {@inheritDoc}
      */
@@ -75,18 +74,16 @@ public class ErlideContributionTemplateStore extends ContributionTemplateStore {
     }
 
     private void readIncludedTemplates(
-            final Collection<TemplatePersistenceData> templates,
-            final String[] files) throws IOException {
+            final Collection<TemplatePersistenceData> templates, final String[] files)
+            throws IOException {
         for (final String file : files) {
             if (file != null) {
                 InputStream stream = null;
                 try {
-                    final InputStream input = new FileInputStream(
-                            new File(file));
+                    final InputStream input = new FileInputStream(new File(file));
                     stream = new BufferedInputStream(input);
                     final TemplateReaderWriter reader = new TemplateReaderWriter();
-                    final TemplatePersistenceData[] datas = reader.read(stream,
-                            null);
+                    final TemplatePersistenceData[] datas = reader.read(stream, null);
                     for (final TemplatePersistenceData data : datas) {
                         if (validateTemplate(data.getTemplate())) {
                             templates.add(data);
@@ -127,7 +124,7 @@ public class ErlideContributionTemplateStore extends ContributionTemplateStore {
     /**
      * Returns <code>true</code> if a context type id specifies a valid context
      * type or if no context type registry is present.
-     * 
+     *
      * @param contextTypeId
      *            the context type id to look for
      * @return <code>true</code> if the context type specified by the id is
@@ -136,7 +133,6 @@ public class ErlideContributionTemplateStore extends ContributionTemplateStore {
      */
     private boolean contextExists(final String contextTypeId) {
         return contextTypeId != null
-                && (getRegistry() == null || getRegistry().getContextType(
-                        contextTypeId) != null);
+                && (getRegistry() == null || getRegistry().getContextType(contextTypeId) != null);
     }
 }

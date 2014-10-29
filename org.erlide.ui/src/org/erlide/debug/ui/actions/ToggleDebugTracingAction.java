@@ -5,18 +5,21 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
-import org.erlide.runtime.debug.ErlangProcess;
+import org.erlide.backend.debug.model.ErlangProcess;
 
 public class ToggleDebugTracingAction implements IWorkbenchWindowActionDelegate {
 
     private ISelection fSelection;
 
+    @Override
     public void dispose() {
     }
 
+    @Override
     public void init(final IWorkbenchWindow window) {
     }
 
+    @Override
     public void run(final IAction action) {
         final IStructuredSelection ss = (IStructuredSelection) fSelection;
         for (final Object o : ss.toArray()) {
@@ -27,8 +30,8 @@ public class ToggleDebugTracingAction implements IWorkbenchWindowActionDelegate 
         }
     }
 
-    public void selectionChanged(final IAction action,
-            final ISelection selection) {
+    @Override
+    public void selectionChanged(final IAction action, final ISelection selection) {
         fSelection = selection;
     }
 

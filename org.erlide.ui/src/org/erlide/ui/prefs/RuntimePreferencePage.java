@@ -12,16 +12,18 @@
 package org.erlide.ui.prefs;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.IDialogSettings;
+import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
-import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.ICheckStateListener;
 import org.eclipse.jface.viewers.IDoubleClickListener;
@@ -52,7 +54,6 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Event;
@@ -63,10 +64,15 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.jinterface.backend.RuntimeInfo;
-import org.erlide.runtime.backend.RuntimeInfoManager;
-import org.erlide.ui.ErlideUIPlugin;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.UIJob;
+import org.erlide.backend.BackendCore;
+import org.erlide.backend.runtimeinfo.RuntimeInfoPreferencesSerializer;
+import org.erlide.runtime.api.RuntimeCore;
+import org.erlide.runtime.runtimeinfo.IRuntimeInfoCatalog;
+import org.erlide.runtime.runtimeinfo.RuntimeInfo;
+import org.erlide.runtime.runtimeinfo.RuntimeInfoCatalogData;
+import org.erlide.ui.internal.ErlideUIPlugin;
 import org.erlide.ui.util.SWTUtil;
 
 /**
@@ -79,16 +85,14 @@ import org.erlide.ui.util.SWTUtil;
  * </p>
  */
 public class RuntimePreferencePage extends PreferencePage implements
-        IAddDialogRequestor<RuntimeInfo>, ISelectionProvider,
-        IWorkbenchPreferencePage {
+        IAddDialogRequestor<RuntimeInfo>, ISelectionProvider, IWorkbenchPreferencePage {
 
-    private final RuntimeInfoManager manager;
-    private Combo combo;
     private static final String RUNTIMES_PREFERENCE_PAGE = "RUNTIMES_PREFERENCE_PAGE";
 
-    Collection<RuntimeInfo> runtimes;
-    RuntimeInfo defaultRuntime;
-    RuntimeInfo erlideRuntime;
+    private final IRuntimeInfoCatalog catalog;
+    private List<RuntimeInfo> runtimes;
+    private RuntimeInfo defaultRuntime;
+    private RuntimeInfo erlideRuntime;
 
     /**
      * The main list control
@@ -120,7 +124,6 @@ public class RuntimePreferencePage extends PreferencePage implements
      * Previous selection
      */
     private ISelection fPrevSelection = new StructuredSelection();
-    private ComboViewer erlideCombo;
 
     public RuntimePreferencePage() {
         super();
@@ -128,56 +131,31 @@ public class RuntimePreferencePage extends PreferencePage implements
         setDescription("Add, remove or edit runtime definitions.\n"
                 + "The checked one will be used by default in new projects "
                 + "to build the project's code.");
-        manager = ErlangCore.getRuntimeInfoManager();
+        catalog = BackendCore.getRuntimeInfoCatalog();
         performDefaults();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.jface.viewers.ISelectionProvider#addSelectionChangedListener
-     * (org.eclipse.jface.viewers.ISelectionChangedListener)
-     */
-    public void addSelectionChangedListener(
-            final ISelectionChangedListener listener) {
+    @Override
+    public void addSelectionChangedListener(final ISelectionChangedListener listener) {
         fSelectionListeners.add(listener);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.eclipse.jface.viewers.ISelectionProvider#getSelection()
-     */
+    @Override
     public ISelection getSelection() {
         return new StructuredSelection(fRuntimeList.getCheckedElements());
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.jface.viewers.ISelectionProvider#removeSelectionChangedListener
-     * (org.eclipse.jface.viewers.ISelectionChangedListener)
-     */
-    public void removeSelectionChangedListener(
-            final ISelectionChangedListener listener) {
+    @Override
+    public void removeSelectionChangedListener(final ISelectionChangedListener listener) {
         fSelectionListeners.remove(listener);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.jface.viewers.ISelectionProvider#setSelection(org.eclipse
-     * .jface.viewers.ISelection)
-     */
+    @Override
     public void setSelection(final ISelection selection) {
         if (selection instanceof IStructuredSelection) {
-            if (!selection.equals(fPrevSelection)) {
+            if (fPrevSelection.isEmpty() || !selection.equals(fPrevSelection)) {
                 fPrevSelection = selection;
-                final Object vm = ((IStructuredSelection) selection)
-                        .getFirstElement();
+                final Object vm = ((IStructuredSelection) selection).getFirstElement();
                 if (vm == null) {
                     fRuntimeList.setCheckedElements(new Object[0]);
                 } else {
@@ -209,9 +187,8 @@ public class RuntimePreferencePage extends PreferencePage implements
         fRuntimeList.setSorter(new ViewerSorter() {
 
             @Override
-            public int compare(final Viewer viewer, final Object e1,
-                    final Object e2) {
-                if ((e1 instanceof RuntimeInfo) && (e2 instanceof RuntimeInfo)) {
+            public int compare(final Viewer viewer, final Object e1, final Object e2) {
+                if (e1 instanceof RuntimeInfo && e2 instanceof RuntimeInfo) {
                     final RuntimeInfo left = (RuntimeInfo) e1;
                     final RuntimeInfo right = (RuntimeInfo) e2;
                     return left.getName().compareToIgnoreCase(right.getName());
@@ -220,8 +197,7 @@ public class RuntimePreferencePage extends PreferencePage implements
             }
 
             @Override
-            public boolean isSorterProperty(final Object element,
-                    final String property) {
+            public boolean isSorterProperty(final Object element, final String property) {
                 return true;
             }
         });
@@ -235,20 +211,17 @@ public class RuntimePreferencePage extends PreferencePage implements
         fRuntimeList.setSorter(new ViewerSorter() {
 
             @Override
-            public int compare(final Viewer viewer, final Object e1,
-                    final Object e2) {
-                if ((e1 instanceof RuntimeInfo) && (e2 instanceof RuntimeInfo)) {
+            public int compare(final Viewer viewer, final Object e1, final Object e2) {
+                if (e1 instanceof RuntimeInfo && e2 instanceof RuntimeInfo) {
                     final RuntimeInfo left = (RuntimeInfo) e1;
                     final RuntimeInfo right = (RuntimeInfo) e2;
-                    return left.getOtpHome().compareToIgnoreCase(
-                            right.getOtpHome());
+                    return left.getOtpHome().compareToIgnoreCase(right.getOtpHome());
                 }
                 return super.compare(viewer, e1, e2);
             }
 
             @Override
-            public boolean isSorterProperty(final Object element,
-                    final String property) {
+            public boolean isSorterProperty(final Object element, final String property) {
                 return true;
             }
         });
@@ -256,11 +229,11 @@ public class RuntimePreferencePage extends PreferencePage implements
     }
 
     protected void enableButtons() {
-        final int selectionCount = ((IStructuredSelection) fRuntimeList
-                .getSelection()).size();
+        final int selectionCount = ((IStructuredSelection) fRuntimeList.getSelection())
+                .size();
         fEditButton.setEnabled(selectionCount == 1);
         fDuplicateButton.setEnabled(selectionCount == 1);
-        fRemoveButton.setEnabled(selectionCount > 0);
+        fRemoveButton.setEnabled(selectionCount > 0 && runtimes.size() > 1);
     }
 
     protected Button createPushButton(final Composite parent, final String label) {
@@ -271,9 +244,8 @@ public class RuntimePreferencePage extends PreferencePage implements
      * Correctly resizes the table so no phantom columns appear
      */
     protected void configureTableResizing(final Composite parent,
-            final Composite buttons, final Table table,
-            final TableColumn column1, final TableColumn column2,
-            final TableColumn column3) {
+            final Composite buttons, final Table table, final TableColumn column1,
+            final TableColumn column2, final TableColumn column3) {
         parent.addControlListener(new ControlAdapter() {
 
             @Override
@@ -283,6 +255,7 @@ public class RuntimePreferencePage extends PreferencePage implements
         });
         table.addListener(SWT.Paint, new Listener() {
 
+            @Override
             public void handleEvent(final Event event) {
                 table.removeListener(SWT.Paint, this);
                 resizeTable(parent, buttons, table, column1, column2, column3);
@@ -309,8 +282,8 @@ public class RuntimePreferencePage extends PreferencePage implements
     }
 
     protected void resizeTable(final Composite parent, final Composite buttons,
-            final Table table, final TableColumn column1,
-            final TableColumn column2, final TableColumn column3) {
+            final Table table, final TableColumn column1, final TableColumn column2,
+            final TableColumn column3) {
         fResizingTable = true;
         int parentWidth = -1;
         int parentHeight = -1;
@@ -319,8 +292,7 @@ public class RuntimePreferencePage extends PreferencePage implements
             parentWidth = area.width;
             parentHeight = area.height;
         } else {
-            final Point parentSize = parent.computeSize(SWT.DEFAULT,
-                    SWT.DEFAULT);
+            final Point parentSize = parent.computeSize(SWT.DEFAULT, SWT.DEFAULT);
             parentWidth = parentSize.x;
             parentHeight = parentSize.y;
         }
@@ -356,7 +328,7 @@ public class RuntimePreferencePage extends PreferencePage implements
 
     /**
      * Returns the Runtimes currently being displayed in this block
-     * 
+     *
      * @return Runtimes currently being displayed in this block
      */
     public List<RuntimeInfo> getRuntimes() {
@@ -369,20 +341,18 @@ public class RuntimePreferencePage extends PreferencePage implements
     protected void addRuntime() {
         fRuntimeList.refresh();
 
-        final AddRuntimeDialog dialog = new AddRuntimeDialog(this, getShell(),
-                null, true);
+        final AddRuntimeDialog dialog = new AddRuntimeDialog(this, getShell(), null);
         dialog.setTitle(RuntimePreferenceMessages.add_title);
         if (dialog.open() != Window.OK) {
             return;
         }
         fRuntimeList.refresh();
-        erlideCombo.refresh();
     }
 
+    @Override
     public void itemAdded(final RuntimeInfo vm) {
         runtimes.add(vm);
         fRuntimeList.refresh();
-        erlideCombo.refresh();
         selectSingle();
     }
 
@@ -390,26 +360,21 @@ public class RuntimePreferencePage extends PreferencePage implements
         if (runtimes.size() == 1) {
             final RuntimeInfo vm = runtimes.iterator().next();
             fRuntimeList.setChecked(vm, true);
-            erlideCombo.setSelection(new StructuredSelection(vm));
         }
         if (runtimes.size() > 1) {
             final RuntimeInfo vm = runtimes.iterator().next();
             if (fRuntimeList.getCheckedElements().length == 0) {
                 fRuntimeList.setChecked(vm, true);
             }
-            final StructuredSelection sel = (StructuredSelection) erlideCombo
-                    .getSelection();
-            if (sel.isEmpty()) {
-                erlideCombo.setSelection(new StructuredSelection(vm));
-            }
         }
     }
 
     /**
-     * @see IAddRuntimeDialogRequestor#isDuplicateName(String)
+     * @see IAddRuntimeDialogRequestor#hasRuntimeWithName(String)
      */
+    @Override
     public boolean isDuplicateName(final String name) {
-        return manager.isDuplicateName(name);
+        return catalog.hasRuntimeWithName(name);
     }
 
     protected void editRuntime() {
@@ -419,14 +384,14 @@ public class RuntimePreferencePage extends PreferencePage implements
         if (vm == null) {
             return;
         }
-        final AddRuntimeDialog dialog = new AddRuntimeDialog(this, getShell(),
-                vm, false);
+        final AddRuntimeDialog dialog = new AddRuntimeDialog(this, getShell(), vm);
         dialog.setTitle(RuntimePreferenceMessages.edit_title);
         if (dialog.open() != Window.OK) {
             return;
         }
-        fRuntimeList.refresh(vm);
-        erlideCombo.refresh();
+        removeRuntimes(new RuntimeInfo[] { vm });
+        catalog.removeRuntime(vm.getName());
+        fRuntimeList.refresh();
     }
 
     protected void duplicateRuntime() {
@@ -436,15 +401,14 @@ public class RuntimePreferencePage extends PreferencePage implements
         if (vm == null) {
             return;
         }
-        final RuntimeInfo vm1 = RuntimeInfo.copy(vm, true);
-        final AddRuntimeDialog dialog = new AddRuntimeDialog(this, getShell(),
-                vm1, true);
+        final RuntimeInfo vm1 = new RuntimeInfo.Builder(vm).withName(
+                vm.getName() + "_copy").build();
+        final AddRuntimeDialog dialog = new AddRuntimeDialog(this, getShell(), vm1);
         dialog.setTitle(RuntimePreferenceMessages.edit_title);
         if (dialog.open() != Window.OK) {
             return;
         }
         fRuntimeList.refresh();
-        erlideCombo.refresh();
     }
 
     protected void removeSelectedRuntimes() {
@@ -462,20 +426,20 @@ public class RuntimePreferencePage extends PreferencePage implements
 
     /**
      * Removes the given VMs from the table.
-     * 
+     *
      * @param vms
      */
     public void removeRuntimes(final RuntimeInfo[] vms) {
         final IStructuredSelection prev = (IStructuredSelection) getSelection();
         if (runtimes.size() == 1) {
-            setMessage("You can't delete the last runtime definition", PreferencePage.INFORMATION);
+            setMessage("You can't delete the last runtime definition",
+                    IMessageProvider.INFORMATION);
             return;
         }
         for (final RuntimeInfo element : vms) {
             runtimes.remove(element);
         }
         fRuntimeList.refresh();
-        erlideCombo.refresh();
         final IStructuredSelection curr = (IStructuredSelection) getSelection();
         if (!curr.equals(prev)) {
             final List<RuntimeInfo> installs = getRuntimes();
@@ -496,7 +460,7 @@ public class RuntimePreferencePage extends PreferencePage implements
 
     /**
      * Sets the checked Backend, possible <code>null</code>
-     * 
+     *
      * @param vm
      *            Backend or <code>null</code>
      */
@@ -510,7 +474,7 @@ public class RuntimePreferencePage extends PreferencePage implements
 
     /**
      * Returns the checked Backend or <code>null</code> if none.
-     * 
+     *
      * @return the checked Backend or <code>null</code> if none
      */
     public RuntimeInfo getCheckedRuntime() {
@@ -524,14 +488,13 @@ public class RuntimePreferencePage extends PreferencePage implements
     /**
      * Persist table settings into the give dialog store, prefixed with the
      * given key.
-     * 
+     *
      * @param settings
      *            dialog store
      * @param qualifier
      *            key qualifier
      */
-    public void saveColumnSettings(final IDialogSettings settings,
-            final String qualifier) {
+    public void saveColumnSettings(final IDialogSettings settings, final String qualifier) {
         for (int i = 0; i < 2; i++) {
             // persist the first 2 column weights
             settings.put(qualifier + ".column" + i, getColumnWeight(i)); //$NON-NLS-1$
@@ -544,14 +507,14 @@ public class RuntimePreferencePage extends PreferencePage implements
         final int tableWidth = table.getSize().x;
         final int columnWidth = table.getColumn(col).getWidth();
         if (tableWidth > columnWidth) {
-            return ((float) columnWidth) / tableWidth;
+            return (float) columnWidth / tableWidth;
         }
         return 1 / 3F;
     }
 
     /**
      * Restore table settings from the given dialog store using the given key.
-     * 
+     *
      * @param settings
      *            dialog settings store
      * @param qualifier
@@ -604,6 +567,7 @@ public class RuntimePreferencePage extends PreferencePage implements
 
         addSelectionChangedListener(new ISelectionChangedListener() {
 
+            @Override
             public void selectionChanged(final SelectionChangedEvent event) {
                 checkValid();
             }
@@ -615,6 +579,7 @@ public class RuntimePreferencePage extends PreferencePage implements
         return parent;
     }
 
+    @Override
     public void init(final IWorkbench workbench) {
     }
 
@@ -638,42 +603,15 @@ public class RuntimePreferencePage extends PreferencePage implements
 
         final Label erlideLabel = new Label(composite, SWT.NONE);
         erlideLabel
-                .setToolTipText("The erlide runtime is used for IDE purposes, not for running project code.");
+                .setToolTipText("The erlide runtime is used for IDE purposes, not for running project code. "
+                        + "It is the most recent stable version that is installed.");
+        final String erlideName = erlideRuntime == null ? "none" : erlideRuntime
+                .getName();
         erlideLabel
-                .setText("Backend used by Erlide itself (restart is required)");
-
-        erlideCombo = new ComboViewer(composite, SWT.READ_ONLY);
-        erlideCombo.setLabelProvider(new RuntimeLabelProvider());
-        erlideCombo.setContentProvider(new RuntimeContentProvider());
-        erlideCombo.setInput(runtimes);
-        combo = erlideCombo.getCombo();
-        final GridData gd_combo = new GridData(SWT.LEFT, SWT.FILL, true, false);
-        gd_combo.widthHint = 153;
-        combo.setLayoutData(gd_combo);
-        if (erlideRuntime != null) {
-            erlideCombo.setSelection(new StructuredSelection(erlideRuntime),
-                    true);
-        }
-        erlideCombo
-                .addPostSelectionChangedListener(new ISelectionChangedListener() {
-                    public void selectionChanged(
-                            final SelectionChangedEvent event) {
-                        fireSelectionChanged();
-                    }
-                });
-        erlideCombo
-                .addSelectionChangedListener(new ISelectionChangedListener() {
-                    public void selectionChanged(
-                            final SelectionChangedEvent event) {
-                        final ISelection sel = event.getSelection();
-                        if (sel instanceof IStructuredSelection) {
-                            final IStructuredSelection ssel = (IStructuredSelection) sel;
-                            erlideRuntime = (RuntimeInfo) ssel
-                                    .getFirstElement();
-                        }
-
-                    }
-                });
+                .setText(RuntimePreferenceMessages.RuntimePreferencePage_erlideLabel_text
+                        + erlideName);
+        new Label(composite, SWT.NONE);
+        new Label(parent, SWT.NONE);
 
         final Label tableLabel = new Label(parent, SWT.NONE);
         tableLabel.setText("Installed runtimes:");
@@ -682,8 +620,8 @@ public class RuntimePreferencePage extends PreferencePage implements
         tableLabel.setLayoutData(data);
         tableLabel.setFont(font);
 
-        final Table table = new Table(parent, SWT.CHECK | SWT.BORDER
-                | SWT.MULTI | SWT.FULL_SELECTION);
+        final Table table = new Table(parent, SWT.CHECK | SWT.BORDER | SWT.MULTI
+                | SWT.FULL_SELECTION);
         table.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
@@ -738,22 +676,26 @@ public class RuntimePreferencePage extends PreferencePage implements
         fRuntimeList.setLabelProvider(new RuntimeLabelProvider());
         fRuntimeList.setContentProvider(new RuntimeContentProvider());
         fRuntimeList.setInput(runtimes);
+        if (defaultRuntime == null || defaultRuntime == RuntimeInfo.NO_RUNTIME_INFO) {
+            defaultRuntime = RuntimeCore.getRuntimeInfoCatalog().getDefaultRuntime();
+        }
         if (defaultRuntime != null) {
             fRuntimeList.setCheckedElements(new Object[] { defaultRuntime });
         }
         // by default, sort by name
         sortByName();
 
-        fRuntimeList
-                .addSelectionChangedListener(new ISelectionChangedListener() {
+        fRuntimeList.addSelectionChangedListener(new ISelectionChangedListener() {
 
-                    public void selectionChanged(final SelectionChangedEvent evt) {
-                        enableButtons();
-                    }
-                });
+            @Override
+            public void selectionChanged(final SelectionChangedEvent evt) {
+                enableButtons();
+            }
+        });
 
         fRuntimeList.addCheckStateListener(new ICheckStateListener() {
 
+            @Override
             public void checkStateChanged(final CheckStateChangedEvent event) {
                 if (event.getChecked()) {
                     setCheckedRuntime((RuntimeInfo) event.getElement());
@@ -765,6 +707,7 @@ public class RuntimePreferencePage extends PreferencePage implements
 
         fRuntimeList.addDoubleClickListener(new IDoubleClickListener() {
 
+            @Override
             public void doubleClick(final DoubleClickEvent e) {
                 if (!fRuntimeList.getSelection().isEmpty()) {
                     editRuntime();
@@ -791,6 +734,7 @@ public class RuntimePreferencePage extends PreferencePage implements
 
         fAddButton = createPushButton(buttons, RuntimePreferenceMessages.add);
         fAddButton.addListener(SWT.Selection, new Listener() {
+            @Override
             public void handleEvent(final Event evt) {
                 addRuntime();
             }
@@ -798,30 +742,30 @@ public class RuntimePreferencePage extends PreferencePage implements
 
         fEditButton = createPushButton(buttons, RuntimePreferenceMessages.edit);
         fEditButton.addListener(SWT.Selection, new Listener() {
+            @Override
             public void handleEvent(final Event evt) {
                 editRuntime();
             }
         });
 
-        fDuplicateButton = createPushButton(buttons,
-                RuntimePreferenceMessages.duplicate);
+        fDuplicateButton = createPushButton(buttons, RuntimePreferenceMessages.duplicate);
         fDuplicateButton.addListener(SWT.Selection, new Listener() {
+            @Override
             public void handleEvent(final Event evt) {
                 duplicateRuntime();
             }
 
         });
 
-        fRemoveButton = createPushButton(buttons,
-                RuntimePreferenceMessages.remove);
+        fRemoveButton = createPushButton(buttons, RuntimePreferenceMessages.remove);
         fRemoveButton.addListener(SWT.Selection, new Listener() {
+            @Override
             public void handleEvent(final Event evt) {
                 removeSelectedRuntimes();
             }
         });
 
-        configureTableResizing(parent, buttons, table, column1, column2,
-                column3);
+        configureTableResizing(parent, buttons, table, column1, column2, column3);
 
         enableButtons();
 
@@ -830,40 +774,56 @@ public class RuntimePreferencePage extends PreferencePage implements
 
     @Override
     public boolean performOk() {
-        manager.setErlideRuntime(erlideRuntime);
-        if (defaultRuntime == null) {
+        if (defaultRuntime == null || defaultRuntime == RuntimeInfo.NO_RUNTIME_INFO) {
             defaultRuntime = (RuntimeInfo) fRuntimeList.getElementAt(0);
         }
-        manager.setDefaultRuntime(defaultRuntime.getName());
-        manager.setRuntimes(runtimes);
-        manager.store();
+        if (erlideRuntime == null) {
+            erlideRuntime = defaultRuntime;
+        }
+
+        boolean restart = false;
+        final RuntimeInfo oldDefault = catalog.getDefaultRuntime();
+        if (oldDefault != RuntimeInfo.NO_RUNTIME_INFO
+                && !defaultRuntime.equals(oldDefault)) {
+            restart = RestartDialog.openQuestion(getShell());
+        }
+
+        catalog.setRuntimes(runtimes, defaultRuntime.getName(), erlideRuntime.getName());
+        final RuntimeInfoPreferencesSerializer serializer = new RuntimeInfoPreferencesSerializer();
+        serializer.store(new RuntimeInfoCatalogData(runtimes, defaultRuntime.getName(),
+                erlideRuntime.getName()));
 
         // save column widths
-        final IDialogSettings settings = ErlideUIPlugin.getDefault()
-                .getDialogSettings();
+        final IDialogSettings settings = ErlideUIPlugin.getDefault().getDialogSettings();
         saveColumnSettings(settings, RUNTIMES_PREFERENCE_PAGE);
+
+        if (restart) {
+            new UIJob("restart") {
+
+                @Override
+                public IStatus runInUIThread(final IProgressMonitor monitor) {
+                    PlatformUI.getWorkbench().restart();
+                    return Status.OK_STATUS;
+                }
+            }.schedule(100);
+        }
 
         return super.performOk();
     }
 
     @Override
     public void performDefaults() {
-        runtimes = manager.getRuntimes();
-        defaultRuntime = manager.getDefaultRuntime();
-        erlideRuntime = manager.getErlideRuntime();
+        runtimes = new ArrayList<RuntimeInfo>(catalog.getRuntimes());
+        defaultRuntime = catalog.getDefaultRuntime();
+        erlideRuntime = catalog.getErlideRuntime();
     }
 
     void checkValid() {
         final RuntimeInfo def = getCheckedRuntime();
-        final StructuredSelection sel = (StructuredSelection) erlideCombo
-                .getSelection();
 
         if (def == null && getRuntimes().size() > 0) {
             setValid(false);
             setErrorMessage("Please select a default runtime.");
-        } else if (sel.isEmpty() && getRuntimes().size() > 0) {
-            setValid(false);
-            setErrorMessage("Please select a runtime to be used by erlide.");
         } else {
             setValid(true);
             setErrorMessage(null);
@@ -875,14 +835,17 @@ public class RuntimePreferencePage extends PreferencePage implements
      */
     class RuntimeContentProvider implements IStructuredContentProvider {
 
+        @Override
         public Object[] getElements(final Object input) {
             return runtimes.toArray(new RuntimeInfo[runtimes.size()]);
         }
 
+        @Override
         public void inputChanged(final Viewer viewer, final Object oldInput,
                 final Object newInput) {
         }
 
+        @Override
         public void dispose() {
         }
 
@@ -897,6 +860,7 @@ public class RuntimePreferencePage extends PreferencePage implements
         /**
          * @see ITableLabelProvider#getColumnText(Object, int)
          */
+        @Override
         public String getColumnText(final Object element, final int columnIndex) {
             if (element instanceof RuntimeInfo) {
                 final RuntimeInfo vm = (RuntimeInfo) element;
@@ -915,6 +879,7 @@ public class RuntimePreferencePage extends PreferencePage implements
         /**
          * @see ITableLabelProvider#getColumnImage(Object, int)
          */
+        @Override
         public Image getColumnImage(final Object element, final int columnIndex) {
             return null;
         }

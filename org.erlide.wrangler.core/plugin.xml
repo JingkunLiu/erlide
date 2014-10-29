@@ -2,18 +2,18 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension
-         point="org.erlide.core.codepath">
+         point="org.erlide.backend.codepath">
       <beam_dir
-            context="any"
+            context="ide"
             path="/wrangler/ebin">
       </beam_dir>
       <beam_dir
-            context="any"
+            context="ide"
             path="/wrangler/app">
       </beam_dir>
       <init
             function="init_eclipse"
-            module="wrangler">
+            module="wrangler_refacs">
       </init>
    </extension>
 

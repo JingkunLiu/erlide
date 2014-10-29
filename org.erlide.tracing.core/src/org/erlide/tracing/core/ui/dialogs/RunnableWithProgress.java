@@ -12,9 +12,9 @@ import org.eclipse.jface.operation.IRunnableWithProgress;
  * of inheriting class. After executing them thread will wait for calling
  * {@link #finish()} method. Purpose of it is to have task which can be started
  * from one place in the code and stopped from other.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public abstract class RunnableWithProgress implements IRunnableWithProgress {
 
@@ -25,15 +25,17 @@ public abstract class RunnableWithProgress implements IRunnableWithProgress {
 
     /**
      * Creates new task.
-     * 
+     *
      * @param label
      *            description of task that will be shown in progress dialog
      */
-    public RunnableWithProgress(String label) {
+    public RunnableWithProgress(final String label) {
         this.label = label;
     }
 
-    public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+    @Override
+    public void run(final IProgressMonitor monitor) throws InvocationTargetException,
+            InterruptedException {
         synchronized (this) {
             monitor.beginTask(label, 0);
             doAction();

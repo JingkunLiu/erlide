@@ -9,30 +9,38 @@ import org.erlide.tracing.core.mvc.model.TracePattern;
 
 /**
  * Provider responsible for displaying trace patterns in table.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
-public class TracePatternLabelProvider extends LabelProvider implements ITableLabelProvider {
+public class TracePatternLabelProvider extends LabelProvider implements
+        ITableLabelProvider {
 
-    public Image getColumnImage(Object element, int index) {
-        TracePattern pattern = (TracePattern) element;
+    @Override
+    public Image getColumnImage(final Object element, final int index) {
+        final TracePattern pattern = (TracePattern) element;
         if (index == TracePatternColumn.ENABLED.ordinal()) {
-            if (pattern.isEnabled())
-                return Activator.getDefault().getImageRegistry().get(Images.CHECKED.toString());
-            else
-                return Activator.getDefault().getImageRegistry().get(Images.UNCHECKED.toString());
+            if (pattern.isEnabled()) {
+                return Activator.getDefault().getImageRegistry()
+                        .get(Images.CHECKED.toString());
+            }
+            return Activator.getDefault().getImageRegistry()
+                    .get(Images.UNCHECKED.toString());
         } else if (index == TracePatternColumn.LOCAL.ordinal()) {
-            if (pattern.isLocal())
-                return Activator.getDefault().getImageRegistry().get(Images.CHECKED.toString());
-            else
-                return Activator.getDefault().getImageRegistry().get(Images.UNCHECKED.toString());
-        } else
+            if (pattern.isLocal()) {
+                return Activator.getDefault().getImageRegistry()
+                        .get(Images.CHECKED.toString());
+            }
+            return Activator.getDefault().getImageRegistry()
+                    .get(Images.UNCHECKED.toString());
+        } else {
             return null;
+        }
     }
 
-    public String getColumnText(Object element, int index) {
-        TracePattern tracePattern = (TracePattern) element;
+    @Override
+    public String getColumnText(final Object element, final int index) {
+        final TracePattern tracePattern = (TracePattern) element;
         switch (TracePatternColumn.getByIndex(index)) {
         case ENABLED:
             break;
@@ -41,10 +49,10 @@ public class TracePatternLabelProvider extends LabelProvider implements ITableLa
         case FUNCTION_NAME:
             return tracePattern.getFunctionName();
         case ARITY:
-            if (tracePattern.getArity() < 0)
+            if (tracePattern.getArity() < 0) {
                 return "";
-            else
-                return String.valueOf(tracePattern.getArity());
+            }
+            return String.valueOf(tracePattern.getArity());
         case LOCAL:
             break;
         case MATCH_SPEC:

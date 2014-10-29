@@ -11,7 +11,11 @@
 
 package org.erlide.ui.prefs.plugin.internal;
 
-import org.eclipse.core.runtime.Assert;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.source.ISourceViewer;
@@ -25,72 +29,54 @@ import org.erlide.ui.prefs.PreferenceConstants;
 
 /**
  * Handles Erlang editor font changes for Erlang source preview viewers.
- * 
+ *
  */
 public class ErlangSourceViewerUpdater {
 
-	/**
-	 * Creates an Erlang source preview updater for the given viewer,
-	 * configuration and preference store.
-	 * 
-	 * @param viewer
-	 *            the viewer
-	 * @param configuration
-	 *            the configuration
-	 * @param preferenceStore
-	 *            the preference store
-	 */
-	public ErlangSourceViewerUpdater(final ISourceViewer viewer,
-			final ErlangSourceViewerConfiguration configuration,
-			final IPreferenceStore preferenceStore) {
-		Assert.isNotNull(viewer);
-		Assert.isNotNull(configuration);
-		Assert.isNotNull(preferenceStore);
-		final IPropertyChangeListener fontChangeListener = new IPropertyChangeListener() {
-
-			/*
-			 * @see
-			 * org.eclipse.jface.util.IPropertyChangeListener#propertyChange
-			 * (org.eclipse.jface.util.PropertyChangeEvent)
-			 */
-			public void propertyChange(final PropertyChangeEvent event) {
-				if (PreferenceConstants.EDITOR_TEXT_FONT.equals(event
-						.getProperty())) {
-					final Font font = JFaceResources
-							.getFont(PreferenceConstants.EDITOR_TEXT_FONT);
-					viewer.getTextWidget().setFont(font);
-				}
-			}
-		};
-		final IPropertyChangeListener propertyChangeListener = new IPropertyChangeListener() {
-
-			/*
-			 * @see
-			 * org.eclipse.jface.util.IPropertyChangeListener#propertyChange
-			 * (org.eclipse.jface.util.PropertyChangeEvent)
-			 */
-			public void propertyChange(final PropertyChangeEvent event) {
-				// if (configuration.affectsTextPresentation(event)) {
-				// configuration.handlePropertyChangeEvent(event);
-				// viewer.invalidateTextPresentation();
-				// }
-			}
-		};
-		viewer.getTextWidget().addDisposeListener(new DisposeListener() {
-
-			/*
-			 * @see
-			 * org.eclipse.swt.events.DisposeListener#widgetDisposed(org.eclipse
-			 * .swt.events.DisposeEvent)
-			 */
-			public void widgetDisposed(final DisposeEvent e) {
-				preferenceStore
-						.removePropertyChangeListener(propertyChangeListener);
-				JFaceResources.getFontRegistry().removeListener(
-						fontChangeListener);
-			}
-		});
-		JFaceResources.getFontRegistry().addListener(fontChangeListener);
-		preferenceStore.addPropertyChangeListener(propertyChangeListener);
-	}
+    /**
+     * Creates an Erlang source preview updater for the given viewer,
+     * configuration and preference store.
+     *
+     * @param viewer
+     *            the viewer
+     * @param configuration
+     *            the configuration
+     * @param preferenceStore
+     *            the preference store
+     */
+    public ErlangSourceViewerUpdater(final ISourceViewer viewer,
+            final ErlangSourceViewerConfiguration configuration,
+            final IPreferenceStore preferenceStore) {
+        assertThat(viewer, is(not(nullValue())));
+        assertThat(configuration, is(not(nullValue())));
+        assertThat(preferenceStore, is(not(nullValue())));
+        final IPropertyChangeListener fontChangeListener = new IPropertyChangeListener() {
+            @Override
+            public void propertyChange(final PropertyChangeEvent event) {
+                if (PreferenceConstants.EDITOR_TEXT_FONT.equals(event.getProperty())) {
+                    final Font font = JFaceResources
+                            .getFont(PreferenceConstants.EDITOR_TEXT_FONT);
+                    viewer.getTextWidget().setFont(font);
+                }
+            }
+        };
+        final IPropertyChangeListener propertyChangeListener = new IPropertyChangeListener() {
+            @Override
+            public void propertyChange(final PropertyChangeEvent event) {
+                if (configuration.affectsTextPresentation(event)) {
+                    configuration.handlePropertyChangeEvent(event);
+                    viewer.invalidateTextPresentation();
+                }
+            }
+        };
+        viewer.getTextWidget().addDisposeListener(new DisposeListener() {
+            @Override
+            public void widgetDisposed(final DisposeEvent e) {
+                preferenceStore.removePropertyChangeListener(propertyChangeListener);
+                JFaceResources.getFontRegistry().removeListener(fontChangeListener);
+            }
+        });
+        JFaceResources.getFontRegistry().addListener(fontChangeListener);
+        preferenceStore.addPropertyChangeListener(propertyChangeListener);
+    }
 }

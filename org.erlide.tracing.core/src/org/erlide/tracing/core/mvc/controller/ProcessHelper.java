@@ -3,12 +3,12 @@ package org.erlide.tracing.core.mvc.controller;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.erlide.jinterface.backend.Backend;
-import org.erlide.jinterface.backend.BackendException;
-import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.runtime.api.IOtpRpc;
+import org.erlide.runtime.rpc.RpcException;
 import org.erlide.tracing.core.TraceBackend;
 import org.erlide.tracing.core.mvc.model.TracedNode;
 import org.erlide.tracing.core.mvc.model.TracedProcess;
+import org.erlide.util.ErlLogger;
 
 import com.ericsson.otp.erlang.OtpErlangAtom;
 import com.ericsson.otp.erlang.OtpErlangList;
@@ -16,9 +16,9 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
 
 /**
  * Helper class for dealing with process lists.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public class ProcessHelper {
 
@@ -30,31 +30,34 @@ public class ProcessHelper {
 
     /**
      * Returns list of processes on all traced nodes.
-     * 
+     *
      * @return list of processes
      */
     public static TracedProcess[] getProcsOnTracedNodes() {
         try {
-            Backend backend = TraceBackend.getInstance().getBackend(true);
-            List<OtpErlangAtom> nodeAtoms = new ArrayList<OtpErlangAtom>();
+            final IOtpRpc backend = TraceBackend.getInstance().getBackend(true)
+                    .getOtpRpc();
+            final List<OtpErlangAtom> nodeAtoms = new ArrayList<OtpErlangAtom>();
 
-            for (Object o : TraceBackend.getInstance().getTracedNodesArray()) {
-                TracedNode tracedNode = (TracedNode) o;
+            for (final Object o : TraceBackend.getInstance().getTracedNodesArray()) {
+                final TracedNode tracedNode = (TracedNode) o;
                 if (tracedNode.isEnabled()) {
                     nodeAtoms.add(new OtpErlangAtom(tracedNode.getNodeName()));
                 }
             }
 
-            OtpErlangList nodesList = new OtpErlangList(nodeAtoms.toArray(new OtpErlangAtom[nodeAtoms.size()]));
-            OtpErlangList procList = (OtpErlangList) backend.call(MODULE_NAME, FUNCTION_NAME, "x", nodesList);
-            TracedProcess[] processes = new TracedProcess[procList.arity()];
+            final OtpErlangList nodesList = new OtpErlangList(
+                    nodeAtoms.toArray(new OtpErlangAtom[nodeAtoms.size()]));
+            final OtpErlangList procList = (OtpErlangList) backend.call(MODULE_NAME,
+                    FUNCTION_NAME, "x", nodesList);
+            final TracedProcess[] processes = new TracedProcess[procList.arity()];
 
             for (int i = 0; i < procList.arity(); i++) {
-                OtpErlangTuple tuple = (OtpErlangTuple) procList.elementAt(i);
+                final OtpErlangTuple tuple = (OtpErlangTuple) procList.elementAt(i);
                 processes[i] = new TracedProcess(tuple);
             }
             return processes;
-        } catch (BackendException e) {
+        } catch (final RpcException e) {
             ErlLogger.error(e);
         }
         return null;

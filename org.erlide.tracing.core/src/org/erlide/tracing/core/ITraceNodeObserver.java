@@ -1,12 +1,11 @@
 package org.erlide.tracing.core;
 
-
 /**
  * Interface which should be implemented by every class which wants to be
  * notified about tracing or loading.
- * 
+ *
  * @author Piotr Dorobisz
- * 
+ *
  */
 public interface ITraceNodeObserver {
 
@@ -17,7 +16,7 @@ public interface ITraceNodeObserver {
 
     /**
      * This method is invoked after finishing loading file.
-     * 
+     *
      * @param status
      *            status
      */
@@ -25,7 +24,7 @@ public interface ITraceNodeObserver {
 
     /**
      * This method is invoked after finishing loading traces from file.
-     * 
+     *
      * @param status
      *            status
      */

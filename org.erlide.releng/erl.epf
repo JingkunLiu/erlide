@@ -1,0 +1,54 @@
+#Wed Apr 28 08:04:04 CEST 2010
+file_export_version=3.0
+
+/instance/org.erlide.core/compiler/allOptions=
+/instance/org.erlide.core/compiler/debug_info=true
+/instance/org.erlide.core/compiler/encrypt_debug_info=false
+/instance/org.erlide.core/compiler/export_all=false
+/instance/org.erlide.core/compiler/nowarn_bif_clash=false
+/instance/org.erlide.core/compiler/nowarn_deprecated_functions=false
+/instance/org.erlide.core/compiler/nowarn_shadow_vars=false
+/instance/org.erlide.core/compiler/warnFormat=true
+/instance/org.erlide.core/compiler/warn_export_all=true
+/instance/org.erlide.core/compiler/warn_obsolete_guard=true
+/instance/org.erlide.core/compiler/warn_unused_import=true
+
+/instance/org.erlide.core/runtimes/default=erl
+/instance/org.erlide.core/runtimes/erlide=erl
+
+/instance/org.erlide.core/runtimes/erl/args=
+/instance/org.erlide.core/runtimes/erl/codePath=
+# homeDir has to be replaced to a proper value
+/instance/org.erlide.core/runtimes/erl/homeDir=/home/jenkins/erlide_tools/otp
+/instance/org.erlide.core/runtimes/erl/longName=true
+/instance/org.erlide.core/runtimes/erl/managed=false
+/instance/org.erlide.core/runtimes/erl/startShell=false
+/instance/org.erlide.core/runtimes/erl/workingDir=.
+
+/instance/org.erlide.core/runtimes/erl15/args=
+/instance/org.erlide.core/runtimes/erl15/codePath=
+# homeDir has to be replaced to a proper value
+/instance/org.erlide.core/runtimes/erl15/homeDir=/home/jenkins/erlide_tools/otp15
+/instance/org.erlide.core/runtimes/erl15/longName=true
+/instance/org.erlide.core/runtimes/erl15/managed=false
+/instance/org.erlide.core/runtimes/erl15/startShell=false
+/instance/org.erlide.core/runtimes/erl15/workingDir=.
+
+/instance/org.erlide.core/runtimes/erl16/args=
+/instance/org.erlide.core/runtimes/erl16/codePath=
+# homeDir has to be replaced to a proper value
+/instance/org.erlide.core/runtimes/erl16/homeDir=/home/jenkins/erlide_tools/otp16
+/instance/org.erlide.core/runtimes/erl16/longName=true
+/instance/org.erlide.core/runtimes/erl16/managed=false
+/instance/org.erlide.core/runtimes/erl16/startShell=false
+/instance/org.erlide.core/runtimes/erl16/workingDir=.
+
+/instance/org.erlide.core/runtimes/erl17/args=
+/instance/org.erlide.core/runtimes/erl17/codePath=
+# homeDir has to be replaced to a proper value
+/instance/org.erlide.core/runtimes/erl17/homeDir=/home/jenkins/erlide_tools/otp17
+/instance/org.erlide.core/runtimes/erl17/longName=true
+/instance/org.erlide.core/runtimes/erl17/managed=false
+/instance/org.erlide.core/runtimes/erl17/startShell=false
+/instance/org.erlide.core/runtimes/erl17/workingDir=.
+

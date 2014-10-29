@@ -10,48 +10,55 @@
  *******************************************************************************/
 package org.erlide.ui.util;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.jinterface.backend.Backend;
-import org.erlide.jinterface.backend.BackendListener;
-import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.backend.BackendCore;
+import org.erlide.backend.api.IBackend;
+import org.erlide.backend.api.IBackendListener;
+import org.erlide.util.ErlLogger;
 
-public class BackendManagerPopup implements BackendListener {
+public final class BackendManagerPopup implements IBackendListener {
 
-	private static final BackendListener fInstance = new BackendManagerPopup();
+    private static final IBackendListener fInstance = new BackendManagerPopup();
 
-	private BackendManagerPopup() {
-	}
+    private BackendManagerPopup() {
+    }
 
-	public static void init() {
-		ErlangCore.getBackendManager().addBackendListener(fInstance);
-	}
+    public static void init() {
+        BackendCore.getBackendManager().addBackendListener(fInstance);
+    }
 
-	public void runtimeAdded(final Backend b) {
-		ErlLogger.debug("$$ added backend " + b.getInfo().getName());
-		final IWorkbench workbench = PlatformUI.getWorkbench();
-		final Display display = workbench.getDisplay();
-		display.asyncExec(new Runnable() {
+    @Override
+    public void runtimeAdded(final IBackend b) {
+        DisplayUtils.asyncExec(new Runnable() {
 
-			public void run() {
-				// PopupDialog.showBalloon("Backend notification", "Added "
-				// + b.getInfo().getName(), DELAY);
-			}
-		});
-	}
+            @Override
+            public void run() {
+                // PopupDialog.showBalloon("Backend notification", "Added "
+                // + b.getInfo().getName(), DELAY);
+            }
+        });
+    }
 
-	public void runtimeRemoved(final Backend b) {
-		ErlLogger.debug("$$ removed backend " + b.getInfo().getName());
-		final IWorkbench workbench = PlatformUI.getWorkbench();
-		final Display display = workbench.getDisplay();
-		display.asyncExec(new Runnable() {
+    @Override
+    public void runtimeRemoved(final IBackend b) {
+        ErlLogger.debug("$$ removed backend " + b.getName());
+        final IWorkbench workbench = PlatformUI.getWorkbench();
+        final Display display = workbench.getDisplay();
+        display.asyncExec(new Runnable() {
 
-			public void run() {
-				// PopupDialog.showBalloon("Backend notification", "Removed "
-				// + b.getInfo().getName(), DELAY);
-			}
-		});
-	}
+            @Override
+            public void run() {
+                // PopupDialog.showBalloon("Backend notification", "Removed "
+                // + b.getInfo().getName(), DELAY);
+            }
+        });
+    }
+
+    @Override
+    public void moduleLoaded(final IBackend backend, final IProject project,
+            final String moduleName) {
+    }
 }

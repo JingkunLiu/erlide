@@ -16,96 +16,100 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.erlide.core.erlang.ErlangCore;
-import org.erlide.core.erlang.IErlElement;
-import org.erlide.core.erlang.IErlFunction;
-import org.erlide.core.erlang.IErlFunctionClause;
-import org.erlide.core.erlang.IErlModule;
-import org.erlide.jinterface.backend.Backend;
-import org.erlide.jinterface.backend.BackendException;
-import org.erlide.jinterface.rpc.RpcFuture;
-import org.erlide.jinterface.util.ErlLogger;
+import org.erlide.backend.api.BackendException;
+import org.erlide.engine.ErlangEngine;
+import org.erlide.engine.model.ErlModelException;
+import org.erlide.engine.model.erlang.FunctionRef;
+import org.erlide.engine.model.erlang.IErlFunction;
+import org.erlide.engine.model.erlang.IErlFunctionClause;
+import org.erlide.engine.model.erlang.IErlModule;
+import org.erlide.engine.model.root.IErlElement;
+import org.erlide.engine.services.search.XrefService;
+import org.erlide.runtime.rpc.RpcFuture;
 import org.erlide.ui.editors.erl.ErlangEditor;
 import org.erlide.ui.jinterface.AsyncCaller;
 import org.erlide.ui.views.CallHierarchyView;
-
-import erlang.ErlangXref;
-import erlang.FunctionRef;
+import org.erlide.util.ErlLogger;
 
 public class CallHierarchyAction extends Action {
 
-	private final ErlangEditor editor;
-	IErlModule module;
+    private final ErlangEditor editor;
+    IErlModule module;
+    private final XrefService xrefService;
 
-	public CallHierarchyAction(ErlangEditor erlangEditor, IErlModule module) {
-		super("Call hierarchy");
-		editor = erlangEditor;
-		this.module = module;
-	}
+    public CallHierarchyAction(final ErlangEditor erlangEditor, final IErlModule module,
+            final XrefService xrefService) {
+        super("Call hierarchy");
+        editor = erlangEditor;
+        this.module = module;
+        this.xrefService = xrefService;
+    }
 
-	@Override
-	public void run() {
-		if (module == null) {
-			return;
-		}
-		IErlElement el = editor.getElementAt(editor.getViewer()
-				.getSelectedRange().x, false);
-		IErlFunction f = null;
-		if (el instanceof IErlFunction) {
-			f = (IErlFunction) el;
-		} else if (el instanceof IErlFunctionClause) {
-			f = (IErlFunction) el.getParent();
-		}
-		if (f == null) {
-			return;
-		}
-		String name = module.getName();
-		int i = name.lastIndexOf('.');
-		if (i > 0) {
-			name = name.substring(0, i);
-		}
-		final FunctionRef ref = new FunctionRef(name, f.getFunctionName(), f
-				.getArity());
+    @Override
+    public void run() {
+        if (module == null) {
+            return;
+        }
+        final IErlElement el = editor.getElementAt(
+                editor.getViewer().getSelectedRange().x, false);
+        IErlFunction f = null;
+        if (el instanceof IErlFunction) {
+            f = (IErlFunction) el;
+        } else if (el instanceof IErlFunctionClause) {
+            f = (IErlFunction) el.getParent();
+        }
+        if (f == null) {
+            return;
+        }
+        String name = module.getName();
+        final int i = name.lastIndexOf('.');
+        if (i > 0) {
+            name = name.substring(0, i);
+        }
+        final FunctionRef ref = new FunctionRef(name, f.getFunctionName(), f.getArity());
 
-		IWorkbenchWindow dw = PlatformUI.getWorkbench()
-				.getActiveWorkbenchWindow();
-		final IWorkbenchPage page = dw.getActivePage();
+        final IWorkbenchWindow dw = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        final IWorkbenchPage page = dw.getActivePage();
 
-		AsyncCaller<CallHierarchyView> ac = new AsyncCaller<CallHierarchyView>(
-				100) {
+        final AsyncCaller<CallHierarchyView> ac = new AsyncCaller<CallHierarchyView>(100) {
 
-			@Override
-			protected CallHierarchyView prepare() {
-				try {
-					IViewPart p = page.showView("org.erlide.ui.callhierarchy");
-					CallHierarchyView cvh = (CallHierarchyView) p
-							.getAdapter(CallHierarchyView.class);
+            @Override
+            protected CallHierarchyView prepare() {
+                try {
+                    final IViewPart p = page.showView("org.erlide.ui.callhierarchy");
+                    final CallHierarchyView cvh = (CallHierarchyView) p
+                            .getAdapter(CallHierarchyView.class);
 
-					cvh.setMessage("<searching... project "
-							+ module.getProject().getName() + ">");
-					return cvh;
-				} catch (PartInitException e) {
-					ErlLogger.error("could not open Call hierarchy view: ", e
-							.getMessage());
-					return null;
-				}
-			}
+                    cvh.setMessage("<searching... project "
+                            + ErlangEngine.getInstance().getModelUtilService()
+                                    .getProject(module).getName() + ">");
+                    return cvh;
+                } catch (final PartInitException e) {
+                    ErlLogger.error("could not open Call hierarchy view: ",
+                            e.getMessage());
+                    return null;
+                }
+            }
 
-			@Override
-			protected RpcFuture call() throws BackendException {
-				Backend b = ErlangCore.getBackendManager().getIdeBackend();
-				final RpcFuture result = ErlangXref.addProject(b, module
-						.getProject());
-				return result;
-			}
+            @Override
+            protected RpcFuture call() throws BackendException {
+                final RpcFuture result = xrefService.addProject(ErlangEngine
+                        .getInstance().getModelUtilService().getProject(module));
+                return result;
+            }
 
-			@Override
-			protected void handleResult(CallHierarchyView context,
-					RpcFuture result) {
-				page.activate(context);
-				context.setRoot(module.getModel().findFunction(ref));
-			}
-		};
-		ac.run();
-	}
+            @Override
+            protected void handleResult(final CallHierarchyView context,
+                    final RpcFuture result) {
+                page.activate(context);
+                try {
+                    context.setRoot(ErlangEngine.getInstance().getModel()
+                            .findFunction(ref));
+                } catch (final ErlModelException e) {
+                    ErlLogger.error(e);
+                }
+            }
+        };
+        ac.run();
+    }
 }

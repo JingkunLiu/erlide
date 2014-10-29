@@ -10,9 +10,14 @@
  *******************************************************************************/
 package org.erlide.ui.util;
 
-import java.util.HashMap;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
-import org.eclipse.core.runtime.Assert;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
@@ -22,78 +27,77 @@ import org.eclipse.swt.widgets.Display;
  */
 public class ImageDescriptorRegistry {
 
-	private final HashMap<ImageDescriptor, Image> fRegistry = new HashMap<ImageDescriptor, Image>(
-			10);
+    private final Map<ImageDescriptor, Image> fRegistry = new HashMap<ImageDescriptor, Image>(
+            10);
 
-	private final Display fDisplay;
+    private final Display fDisplay;
 
-	/**
-	 * Creates a new image descriptor registry for the current or default
-	 * display, respectively.
-	 */
-	public ImageDescriptorRegistry() {
-		this(SWTUtil.getStandardDisplay());
-	}
+    /**
+     * Creates a new image descriptor registry for the current or default
+     * display, respectively.
+     */
+    public ImageDescriptorRegistry() {
+        this(SWTUtil.getStandardDisplay());
+    }
 
-	/**
-	 * Creates a new image descriptor registry for the given display. All images
-	 * managed by this registry will be disposed when the display gets disposed.
-	 * 
-	 * @param display
-	 *            the display the images managed by this registry are allocated
-	 *            for
-	 */
-	public ImageDescriptorRegistry(final Display display) {
-		fDisplay = display;
-		Assert.isNotNull(fDisplay);
-		hookDisplay();
-	}
+    /**
+     * Creates a new image descriptor registry for the given display. All images
+     * managed by this registry will be disposed when the display gets disposed.
+     *
+     * @param display
+     *            the display the images managed by this registry are allocated
+     *            for
+     */
+    public ImageDescriptorRegistry(final Display display) {
+        assertThat(display, is(not(nullValue())));
+        fDisplay = display;
+        hookDisplay();
+    }
 
-	/**
-	 * Returns the image assiciated with the given image descriptor.
-	 * 
-	 * @param descriptor
-	 *            the image descriptor for which the registry manages an image
-	 * @return the image associated with the image descriptor or
-	 *         <code>null</code> if the image descriptor can't create the
-	 *         requested image.
-	 */
-	public Image get(ImageDescriptor descriptor) {
-		if (descriptor == null) {
-			descriptor = ImageDescriptor.getMissingImageDescriptor();
-		}
+    /**
+     * Returns the image assiciated with the given image descriptor.
+     *
+     * @param descriptor
+     *            the image descriptor for which the registry manages an image
+     * @return the image associated with the image descriptor or
+     *         <code>null</code> if the image descriptor can't create the
+     *         requested image.
+     */
+    public Image get(final ImageDescriptor descriptor0) {
+        final ImageDescriptor descriptor = descriptor0 != null ? descriptor0
+                : ImageDescriptor.getMissingImageDescriptor();
 
-		Image result = fRegistry.get(descriptor);
-		if (result != null) {
-			return result;
-		}
+        Image result = fRegistry.get(descriptor);
+        if (result != null) {
+            return result;
+        }
 
-		Assert.isTrue(fDisplay == SWTUtil.getStandardDisplay(),
-				"Allocating image for wrong display."); //$NON-NLS-1$
-		result = descriptor.createImage();
-		if (result != null) {
-			fRegistry.put(descriptor, result);
-		}
-		return result;
-	}
+        assertThat(fDisplay, is(SWTUtil.getStandardDisplay()));
+        result = descriptor.createImage();
+        if (result != null) {
+            fRegistry.put(descriptor, result);
+        }
+        return result;
+    }
 
-	/**
-	 * Disposes all images managed by this registry.
-	 */
-	public void dispose() {
-		for (final Object element : fRegistry.values()) {
-			final Image image = (Image) element;
-			image.dispose();
-		}
-		fRegistry.clear();
-	}
+    /**
+     * Disposes all images managed by this registry.
+     */
+    public void dispose() {
+        for (final Object element : fRegistry.values()) {
+            final Image image = (Image) element;
+            image.dispose();
+        }
+        fRegistry.clear();
+    }
 
-	private void hookDisplay() {
-		fDisplay.disposeExec(new Runnable() {
+    private void hookDisplay() {
+        fDisplay.disposeExec(new Runnable() {
 
-			public void run() {
-				dispose();
-			}
-		});
-	}
+            @Override
+            public void run() {
+                dispose();
+            }
+        });
+    }
 }
